@@ -70,7 +70,7 @@ contract MarketResolver {
     event DisputeRaised(bytes32 indexed marketId, address challenger, string reason);
     event DisputeResolved(bytes32 indexed marketId, DisputeState state);
     event CommitteeVote(bytes32 indexed marketId, address member, IMarket.OutcomeIndex outcome);
-    event ChainlinkFeedSet(bytes32 indexed marketId, address feed, int256 targetPrice);─
+    event ChainlinkFeedSet(bytes32 indexed marketId, address feed, int256 targetPrice);
 
     error Unauthorized();
     error MarketNotRegistered();
