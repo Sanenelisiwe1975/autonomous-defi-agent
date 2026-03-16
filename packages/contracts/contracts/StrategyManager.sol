@@ -1,38 +1,47 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
+import "./AgentVault.sol";
+import "./iMarket.sol";
+
+/**
+ * @title StrategyManager
+ * @notice EIP-712 signed strategy bundle executor.
+ *         The agent signs bundles off-chain; any approved executor submits them on-chain.
+ *         Nonces prevent replay. Deadlines prevent stale execution.
+ */
 contract StrategyManager {
-    enum BundleType { ENTER_LONG, EXIT, LP_DEPLOY, LP_RECALL, REBALANCE, CLAIM}
+    enum BundleType { ENTER_LONG, EXIT, LP_DEPLOY, LP_RECALL, REBALANCE, CLAIM }
 
     struct StrategyBundle {
-        BundleType  bundleType;
-        bytes32     marketIdA;
-        bytes32     marketIdB;
-        address     marketAdrrA;
-        address     marketAdrrB;
-        address     collateralToken;
-        uint256     amount;
+        BundleType           bundleType;
+        bytes32              marketIdA;
+        bytes32              marketIdB;
+        address              marketAddrA;
+        address              marketAddrB;
+        address              collateralToken;
+        uint256              amount;
         IMarket.OutcomeIndex outcomeA;
         IMarket.OutcomeIndex outcomeB;
-        uint256     minOut;          
-        uint256     deadline;      
-        uint256     nonce;   
+        uint256              minOut;
+        uint256              deadline;
+        uint256              nonce;
     }
 
-    strut StrategyRecord{
-        uint256  totalDeployed;
-        uint256  totalReturned;
-        uint256  executionCount;
-        uint256  lastExecuted;
+    struct StrategyRecord {
+        uint256 totalDeployed;
+        uint256 totalReturned;
+        uint256 executionCount;
+        uint256 lastExecuted;
     }
 
-    AgentVault public immutable vault:
+    AgentVault public immutable vault;
     address    public agentKey;
     address    public owner;
 
-    mapping(address => bool)   public approvedExecutors;
-    mapping (uint256 => bool)  public usedNonces;
-    mapping(bytes => StrategyRecord) public strategyRecords;
+    mapping(address  => bool)           public approvedExecutors;
+    mapping(uint256  => bool)           public usedNonces;
+    mapping(bytes32  => StrategyRecord) public strategyRecords;
 
     bytes32 public immutable DOMAIN_SEPARATOR;
     bytes32 public constant BUNDLE_TYPEHASH = keccak256(
@@ -41,7 +50,6 @@ contract StrategyManager {
         "uint256 amount,uint8 outcomeA,uint8 outcomeB,uint256 minOut,"
         "uint256 deadline,uint256 nonce)"
     );
-
 
     event BundleExecuted(BundleType bundleType, bytes32 marketIdA, bytes32 marketIdB, uint256 amount);
     event AgentKeyRotated(address newKey);
@@ -67,10 +75,8 @@ contract StrategyManager {
         ));
     }
 
-
     modifier onlyOwner() { if (msg.sender != owner) revert Unauthorized(); _; }
 
-   
     function executeBundle(
         StrategyBundle calldata bundle,
         bytes          calldata signature
@@ -80,21 +86,14 @@ contract StrategyManager {
         if (usedNonces[bundle.nonce])          revert NonceUsed();
 
         _verifySignature(bundle, signature);
-
         usedNonces[bundle.nonce] = true;
 
-        if      (bundle.bundleType == BundleType.ENTER_LONG) _enterLong(bundle);
-        else if (bundle.bundleType == BundleType.EXIT)        _exit(bundle);
-        else if (bundle.bundleType == BundleType.LP_DEPLOY)   _lpDeploy(bundle);
-        else if (bundle.bundleType == BundleType.LP_RECALL)   _lpRecall(bundle);
-        else if (bundle.bundleType == BundleType.REBALANCE)   _rebalance(bundle);
-        else if (bundle.bundleType == BundleType.CLAIM)       _claim(bundle);
-        else revert InvalidBundle();
+        _dispatch(bundle);
 
         StrategyRecord storage rec = strategyRecords[bundle.marketIdA];
-        rec.totalDeployed += bundle.amount;
+        rec.totalDeployed  += bundle.amount;
         rec.executionCount++;
-        rec.lastExecuted = block.timestamp;
+        rec.lastExecuted    = block.timestamp;
 
         emit BundleExecuted(bundle.bundleType, bundle.marketIdA, bundle.marketIdB, bundle.amount);
     }
@@ -102,19 +101,22 @@ contract StrategyManager {
     function directExecute(StrategyBundle calldata bundle) external {
         if (msg.sender != agentKey) revert Unauthorized();
         if (block.timestamp > bundle.deadline) revert BundleExpired();
-        if (usedNonces [bundle.nonce])   revert NonceUsed();
+        if (usedNonces[bundle.nonce])          revert NonceUsed();
         usedNonces[bundle.nonce] = true;
 
-        if      (bundle.bundleType == BundleType.ENTER_LONG) _enterLong(bundle);
-        else if (bundle.bundleType == BundleType.EXIT)        _exit(bundle);
-        else if (bundle.bundleType == BundleType.LP_DEPLOY)   _lpDeploy(bundle);
-        else if (bundle.bundleType == BundleType.LP_RECALL)   _lpRecall(bundle);
-        else if (bundle.bundleType == BundleType.REBALANCE)   _rebalance(bundle);
-        else if (bundle.bundleType == BundleType.CLAIM)       _claim(bundle);
-        else revert InvalidBundle();
+        _dispatch(bundle);
 
-        emit BundleExecuted(bundle.bundleType, bundle.marketIdA, bundle.marketIdB, bundle.amount); 
-        
+        emit BundleExecuted(bundle.bundleType, bundle.marketIdA, bundle.marketIdB, bundle.amount);
+    }
+
+    function _dispatch(StrategyBundle calldata b) internal {
+        if      (b.bundleType == BundleType.ENTER_LONG) _enterLong(b);
+        else if (b.bundleType == BundleType.EXIT)        _exit(b);
+        else if (b.bundleType == BundleType.LP_DEPLOY)   _lpDeploy(b);
+        else if (b.bundleType == BundleType.LP_RECALL)   _lpRecall(b);
+        else if (b.bundleType == BundleType.REBALANCE)   _rebalance(b);
+        else if (b.bundleType == BundleType.CLAIM)        _claim(b);
+        else revert InvalidBundle();
     }
 
     function _enterLong(StrategyBundle calldata b) internal {
@@ -135,20 +137,16 @@ contract StrategyManager {
     }
 
     function _lpRecall(StrategyBundle calldata b) internal {
-        // b.amount = lpShares to recall
         vault.withdrawLiquidity(b.marketIdA, b.amount, b.minOut);
     }
 
     function _rebalance(StrategyBundle calldata b) internal {
-        // Step 1: exit position in market A
         vault.withdrawCapital(b.marketIdA, b.outcomeA, b.amount, 0);
-        // Step 2: re-deploy proceeds into market B
-        // Note: actual collateral received from step 1 is used; minOut applied here
         vault.deployCapital(
             b.marketIdB, b.marketAddrB, b.collateralToken,
             b.amount, b.outcomeB, b.minOut
         );
-    
+    }
 
     function _claim(StrategyBundle calldata b) internal {
         uint256 payout = vault.claimWinnings(b.marketIdA);
@@ -172,7 +170,6 @@ contract StrategyManager {
             bundle.nonce
         ));
         bytes32 digest = keccak256(abi.encodePacked("\x19\x01", DOMAIN_SEPARATOR, structHash));
-
         address recovered = _recoverSigner(digest, sig);
         if (recovered != agentKey) revert InvalidSignature();
     }
@@ -192,7 +189,6 @@ contract StrategyManager {
         return ecrecover(digest, v, r, s);
     }
 
-
     function rotateAgentKey(address newKey) external onlyOwner {
         agentKey = newKey;
         emit AgentKeyRotated(newKey);
@@ -206,7 +202,4 @@ contract StrategyManager {
     function getStrategyRecord(bytes32 marketId) external view returns (StrategyRecord memory) {
         return strategyRecords[marketId];
     }
-}
-
-
 }
