@@ -1,0 +1,36 @@
+{
+  "name": "@repo/agent",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Autonomous DeFi Agent — Observe → Reason → Decide → Execute → Learn loop",
+  "license": "Apache-2.0",
+  "type": "module",
+  "main": "./dist/index.js",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsx watch src/index.ts",
+    "start": "node dist/index.js",
+    "check-types": "tsc --noEmit",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "@repo/data": "*",
+    "ethers": "^6.13.0",
+    "@repo/planner": "*",
+    "@repo/wdk": "*",
+    "@langchain/core": "^0.3.0",
+    "@langchain/openai": "^0.3.0",
+    "langchain": "^0.3.0",
+    "pg": "^8.13.0",
+    "redis": "^4.7.0",
+    "zod": "^3.24.0",
+    "dotenv": "^16.4.0"
+  },
+  "devDependencies": {
+    "@repo/typescript-config": "*",
+    "@types/node": "^22.0.0",
+    "@types/pg": "^8.11.0",
+    "tsx": "^4.19.0",
+    "typescript": "5.9.2"
+  }
+}

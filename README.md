@@ -1,159 +1,223 @@
-# Turborepo starter
+# Autonomous DeFi Agent
 
-This Turborepo starter is maintained by the Turborepo core team.
+An autonomous on-chain agent that continuously observes DeFi markets, reasons about opportunities using Claude (Anthropic), decides risk-adjusted positions, executes trades via the Tether WDK, and learns from every cycle — all without human intervention.
 
-## Using this example
+Built for the **Tether Hackathon Galáctica: WDK Edition 1** — Track: **Autonomous DeFi Agent**.
 
-Run the following command:
+---
 
-```sh
-npx create-turbo@latest
+## How It Works
+
+```
+┌──────────────────────────────────────────────────────────────┐
+│                        Agent Loop                            │
+│                                                              │
+│  Observe  →  Reason  →  Decide  →  Execute  →  Learn        │
+│    │            │           │          │           │         │
+│  Prices      Claude       EV + Risk   WDK +      Postgres    │
+│  Gas         Planning     Gates       Contracts   Redis       │
+│  Liquidity   (LangChain)             Transfers   JSON log    │
+└──────────────────────────────────────────────────────────────┘
 ```
 
-## What's inside?
+1. **Observe** — fetches ETH/USDT/XAUT prices (Chainlink + CoinGecko fallback), gas snapshot, Uniswap V3 liquidity, and active prediction market opportunities. Checks vault balance and auto-tops-up if agent USDT drops below $50.
+2. **Reason** — sends the full market state to Claude Sonnet via LangChain.js; receives a ranked list of `AgentAction` objects (OpenClaw-style planning engine).
+3. **Decide** — applies global risk gates (USDT depeg halt, gas congestion halt) and per-action filters (min EV > 2%, max position size 5%, risk score ≤ 70).
+4. **Execute** — routes approved actions to on-chain operations via the Tether WDK (`transferUSDT`, `transferXAUT`) and direct Solidity contract calls (`enterPosition`, `redeem`).
+5. **Learn** — persists cycle outcomes to a JSON log, PostgreSQL, and Redis; updates Bayesian priors per action type.
 
-This Turborepo includes the following packages/apps:
+---
 
-### Apps and Packages
+## Monorepo Structure
 
-- `docs`: a [Next.js](https://nextjs.org/) app
-- `web`: another [Next.js](https://nextjs.org/) app
-- `@repo/ui`: a stub React component library shared by both `web` and `docs` applications
-- `@repo/eslint-config`: `eslint` configurations (includes `eslint-config-next` and `eslint-config-prettier`)
-- `@repo/typescript-config`: `tsconfig.json`s used throughout the monorepo
-
-Each package/app is 100% [TypeScript](https://www.typescriptlang.org/).
-
-### Utilities
-
-This Turborepo has some additional tools already setup for you:
-
-- [TypeScript](https://www.typescriptlang.org/) for static type checking
-- [ESLint](https://eslint.org/) for code linting
-- [Prettier](https://prettier.io) for code formatting
-
-### Build
-
-To build all apps and packages, run the following command:
-
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended):
-
-```sh
-cd my-turborepo
-turbo build
+```
+autonomous-defi-agent/
+├── apps/
+│   └── web/                  # Next.js 14 real-time dashboard
+├── packages/
+│   ├── agent/                # Autonomous loop (observe→learn)
+│   ├── contracts/            # Solidity: AgentVault, PredictionMarket, MarketFactory
+│   ├── data/                 # Oracle, Uniswap V3 liquidity, gas feeds
+│   ├── planner/              # LLM reasoning engine (LangChain.js + Claude)
+│   ├── wdk/                  # Tether WDK wallet wrapper
+│   ├── ui/                   # Shared React components
+│   ├── eslint-config/        # Shared ESLint presets
+│   └── typescript-config/    # Shared tsconfig bases
+├── infra/
+│   ├── docker-compose.yml    # Postgres 16 + Redis 7
+│   └── init.sql              # Database schema
+└── .env.example              # All required environment variables
 ```
 
-Without global `turbo`, use your package manager:
+Each package has its own README with detailed API docs.
 
-```sh
-cd my-turborepo
-npx turbo build
-yarn dlx turbo build
-pnpm exec turbo build
+---
+
+## Quick Start
+
+### 1. Prerequisites
+
+- Node.js 20+
+- Docker (for Postgres + Redis)
+- An Ethereum RPC endpoint (Alchemy, Infura, or local node)
+- Anthropic API key (optional — falls back to mock planner without it)
+
+### 2. Install dependencies
+
+```bash
+npm install
 ```
 
-You can build a specific package by using a [filter](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters):
+### 3. Configure environment
 
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed:
-
-```sh
-turbo build --filter=docs
+```bash
+cp .env.example packages/agent/.env
+# Fill in RPC_URL, AGENT_SEED_PHRASE, ANTHROPIC_API_KEY, contract addresses
 ```
 
-Without global `turbo`:
+### 4. Start infrastructure
 
-```sh
-npx turbo build --filter=docs
-yarn exec turbo build --filter=docs
-pnpm exec turbo build --filter=docs
+```bash
+docker compose -f infra/docker-compose.yml up -d
 ```
 
-### Develop
+### 5. Build all packages
 
-To develop all apps and packages, run the following command:
-
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended):
-
-```sh
-cd my-turborepo
-turbo dev
+```bash
+npm run build
 ```
 
-Without global `turbo`, use your package manager:
+### 6. Deploy contracts (Sepolia)
 
-```sh
-cd my-turborepo
-npx turbo dev
-yarn exec turbo dev
-pnpm exec turbo dev
+```bash
+cd packages/contracts
+node scripts/deploy-all.mjs          # deploys AgentVault + MarketFactory
+node scripts/set-vault-agent.mjs     # authorises WDK wallet on vault
+node scripts/create-market.mjs       # creates first prediction market
 ```
 
-You can develop a specific package by using a [filter](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters):
+Copy the output addresses into `packages/agent/.env` as `AGENT_VAULT_ADDRESS` and `MARKET_FACTORY_ADDRESS`.
 
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed:
+### 7. Run the agent
 
-```sh
-turbo dev --filter=web
+```bash
+cd packages/agent
+node --env-file=.env dist/index.js
 ```
 
-Without global `turbo`:
+### 8. Open the dashboard
 
-```sh
-npx turbo dev --filter=web
-yarn exec turbo dev --filter=web
-pnpm exec turbo dev --filter=web
+```bash
+# In a separate terminal, copy .env vars to apps/web/.env.local first
+npm run dev --workspace=apps/web
+# → http://localhost:3000/dashboard
 ```
 
-### Remote Caching
+---
 
-> [!TIP]
-> Vercel Remote Cache is free for all plans. Get started today at [vercel.com](https://vercel.com/signup?utm_source=remote-cache-sdk&utm_campaign=free_remote_cache).
+## Environment Variables
 
-Turborepo can use a technique known as [Remote Caching](https://turborepo.dev/docs/core-concepts/remote-caching) to share cache artifacts across machines, enabling you to share build caches with your team and CI/CD pipelines.
+| Variable | Required | Description |
+|---|---|---|
+| `RPC_URL` | Yes | Ethereum JSON-RPC endpoint (Alchemy/Infura) |
+| `AGENT_SEED_PHRASE` | Yes | BIP-39 mnemonic (12 or 24 words) — WDK wallet |
+| `ANTHROPIC_API_KEY` | No | Claude API key (mock planner used if absent) |
+| `DATABASE_URL` | Yes | PostgreSQL connection string |
+| `REDIS_URL` | Yes | Redis connection string |
+| `USDT_CONTRACT_ADDRESS` | Yes | USD₮ ERC-20 contract address |
+| `XAUT_CONTRACT_ADDRESS` | Yes | XAU₮ ERC-20 contract address |
+| `AGENT_VAULT_ADDRESS` | Yes | Deployed AgentVault contract address |
+| `MARKET_FACTORY_ADDRESS` | Yes | Deployed MarketFactory contract address |
+| `AGENT_DRY_RUN` | No | `true` = log only, no real txs (default: `true`) |
+| `AGENT_LOOP_INTERVAL_MS` | No | Loop interval in ms (default: `60000`) |
+| `LLM_MODEL` | No | Claude model override (default: `claude-sonnet-4-6`) |
+| `WALLET_MAX_FEE_WEI` | No | Max gas per transfer in wei (default: `1000000000000000`) |
 
-By default, Turborepo will cache locally. To enable Remote Caching you will need an account with Vercel. If you don't have an account you can [create one](https://vercel.com/signup?utm_source=turborepo-examples), then enter the following commands:
+See `.env.example` for the full list with default values.
 
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed (recommended):
+---
 
-```sh
-cd my-turborepo
-turbo login
+## Smart Contracts (Sepolia Testnet)
+
+| Contract | Address | Purpose |
+|---|---|---|
+| `AgentVault` | `0x824a901E3609C5d8D6F874b31Fe736364190119D` | Holds USD₮; enforces daily withdrawal limit |
+| `MarketFactory` | `0x3947C99650879990cB2c0C0cbB22FE71e5CF11f9` | Creates and registers PredictionMarket instances |
+| `PredictionMarket` | `0x6A58ee4901670b915Ca085db5A5d6e508d6400e5` | Binary AMM — YES/NO outcome token market |
+| `OutcomeToken` | (deployed by market) | ERC-20 representing a single market outcome |
+
+---
+
+## Tech Stack
+
+| Layer | Technology |
+|---|---|
+| Wallet | Tether WDK (`@tetherto/wdk-wallet-evm`) |
+| AI Planning | LangChain.js + Claude Sonnet 4.6 (`@langchain/anthropic`) |
+| Price Feeds | Chainlink AggregatorV3 + CoinGecko REST API (fallback) |
+| DEX Data | Uniswap V3 pool queries via ethers.js |
+| Smart Contracts | Solidity 0.8 + Hardhat |
+| Dashboard | Next.js 14 App Router + Recharts |
+| Database | PostgreSQL 16 |
+| Cache / PubSub | Redis 7 |
+| Monorepo | Turborepo + npm workspaces |
+| Language | TypeScript ESM throughout |
+
+---
+
+## Third-Party Services & APIs
+
+| Service | Purpose | Terms |
+|---|---|---|
+| [Anthropic Claude](https://anthropic.com) | LLM reasoning (claude-sonnet-4-6) | Commercial API |
+| [Alchemy](https://alchemy.com) | Ethereum RPC endpoint | Commercial API |
+| [Chainlink](https://chain.link) | On-chain price feeds (ETH/USD, XAU/USD, USDT/USD) | Open smart contracts |
+| [CoinGecko](https://coingecko.com) | Price fallback REST API | Free public API |
+| [Uniswap V3](https://uniswap.org) | Liquidity pool data | Open smart contracts |
+| [LangChain.js](https://js.langchain.com) | LLM framework | MIT license |
+| [OpenZeppelin](https://openzeppelin.com) | Solidity contract base classes | MIT license |
+| [ethers.js v6](https://ethers.org) | Ethereum library | MIT license |
+
+---
+
+## Architecture
+
+See [ARCHITECTURE.md](ARCHITECTURE.md) for a detailed walkthrough of every module and how a single agent cycle flows end-to-end.
+
+---
+
+## Risk Controls
+
+- **USDT depeg halt** — all execution suspended if USDT price deviates >0.5% from $1.00
+- **Gas congestion halt** — all execution suspended if base fee >100 gwei
+- **EV threshold** — ENTER_MARKET rejected if net expected value <2% (after gas costs)
+- **Risk score filter** — rejects positions with probability uncertainty + payout ratio risk >70/100
+- **Position cap** — individual positions clamped to 5% of total portfolio
+- **Daily vault limit** — `AgentVault` contract enforces $1,000/day withdrawal ceiling on-chain
+- **Slippage guard** — market entry accepts minimum 95% of quoted token output
+- **Dry-run mode** — `AGENT_DRY_RUN=true` by default; no real transactions until explicitly enabled
+
+---
+
+## Development Commands
+
+```bash
+npm run build          # Build all packages (respects dependency order)
+npm run dev            # Start all packages in watch mode
+npm run lint           # Lint all packages
+npm run check-types    # Type-check all packages
+npm run clean          # Remove all dist/ directories
 ```
 
-Without global `turbo`, use your package manager:
+Run a single package with `--filter`:
 
-```sh
-cd my-turborepo
-npx turbo login
-yarn exec turbo login
-pnpm exec turbo login
+```bash
+npm run build -- --filter=@repo/agent
+npm run dev   -- --filter=@repo/planner
 ```
 
-This will authenticate the Turborepo CLI with your [Vercel account](https://vercel.com/docs/concepts/personal-accounts/overview).
+---
 
-Next, you can link your Turborepo to your Remote Cache by running the following command from the root of your Turborepo:
+## License
 
-With [global `turbo`](https://turborepo.dev/docs/getting-started/installation#global-installation) installed:
-
-```sh
-turbo link
-```
-
-Without global `turbo`:
-
-```sh
-npx turbo link
-yarn exec turbo link
-pnpm exec turbo link
-```
-
-## Useful Links
-
-Learn more about the power of Turborepo:
-
-- [Tasks](https://turborepo.dev/docs/crafting-your-repository/running-tasks)
-- [Caching](https://turborepo.dev/docs/crafting-your-repository/caching)
-- [Remote Caching](https://turborepo.dev/docs/core-concepts/remote-caching)
-- [Filtering](https://turborepo.dev/docs/crafting-your-repository/running-tasks#using-filters)
-- [Configuration Options](https://turborepo.dev/docs/reference/configuration)
-- [CLI Usage](https://turborepo.dev/docs/reference/command-line-reference)
+Apache 2.0 — see [LICENSE](LICENSE).

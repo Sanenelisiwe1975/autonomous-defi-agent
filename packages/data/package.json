@@ -1,0 +1,32 @@
+{
+  "name": "@repo/data",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Market data feeds — on-chain oracles, liquidity depth, gas estimates",
+  "license": "Apache-2.0",
+  "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    }
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "check-types": "tsc --noEmit",
+    "clean": "rm -rf dist"
+  },
+  "dependencies": {
+    "ethers": "^6.13.0",
+    "node-fetch": "^3.3.2",
+    "zod": "^3.24.0"
+  },
+  "devDependencies": {
+    "@repo/typescript-config": "*",
+    "@types/node": "^22.0.0",
+    "typescript": "5.9.2"
+  }
+}
