@@ -46,15 +46,15 @@ contract MarketResolver {
     uint256 public constant COMMITTEE_QUORUM = 3;
 
     address public owner;
-    address public collateralToken;           // USD₮ for dispute bonds
+    address public collateralToken;          
 
     address[5] public committee;
     mapping(address => bool) public isCommitteeMember;
 
-    address public aiOracle;                  // Agent wallet authorised to call aiResolve()
+    address public aiOracle;           
 
-    mapping(bytes32 => address)  public chainlinkFeeds;   // marketId → Chainlink feed
-    mapping(bytes32 => int256)   public resolutionPrices; // marketId → target price (8 dec)
+    mapping(bytes32 => address)  public chainlinkFeeds;  
+    mapping(bytes32 => int256)   public resolutionPrices; 
 
     mapping(bytes32 => Resolution) public resolutions;
     mapping(bytes32 => Dispute)    public disputes;
@@ -64,17 +64,13 @@ contract MarketResolver {
 
     mapping(bytes32 => address) public registeredMarkets; // marketId → PredictionMarket
 
-    // ── Events ────────────────────────────────────────────────────────────────
-
     event MarketRegistered(bytes32 indexed marketId, address market);
     event ResolutionProposed(bytes32 indexed marketId, IMarket.OutcomeIndex outcome, ResolutionSource source, string rationale);
     event ResolutionFinalized(bytes32 indexed marketId, IMarket.OutcomeIndex outcome);
     event DisputeRaised(bytes32 indexed marketId, address challenger, string reason);
     event DisputeResolved(bytes32 indexed marketId, DisputeState state);
     event CommitteeVote(bytes32 indexed marketId, address member, IMarket.OutcomeIndex outcome);
-    event ChainlinkFeedSet(bytes32 indexed marketId, address feed, int256 targetPrice);
-
-    // ── Errors ────────────────────────────────────────────────────────────────
+    event ChainlinkFeedSet(bytes32 indexed marketId, address feed, int256 targetPrice);─
 
     error Unauthorized();
     error MarketNotRegistered();
@@ -87,8 +83,6 @@ contract MarketResolver {
     error NotCommitteeMember();
     error QuorumNotReached();
     error InvalidOutcome();
-
-    // ── Constructor ───────────────────────────────────────────────────────────
 
     constructor(
         address _owner,
@@ -106,22 +100,18 @@ contract MarketResolver {
         }
     }
 
-    // ── Modifiers ─────────────────────────────────────────────────────────────
-
     modifier onlyOwner()    { if (msg.sender != owner)    revert Unauthorized(); _; }
     modifier onlyAiOracle() {
         if (msg.sender != aiOracle && msg.sender != owner) revert Unauthorized();
         _;
     }
 
-    // ── Registration ─────────────────────────────────────────────────────────
 
     function registerMarket(bytes32 marketId, address market) external onlyOwner {
         registeredMarkets[marketId] = market;
         emit MarketRegistered(marketId, market);
     }
 
-    // ── Resolution paths ─────────────────────────────────────────────────────
 
     /**
      * @notice Committee member or owner proposes an outcome (multisig path).
@@ -228,8 +218,6 @@ contract MarketResolver {
         emit ResolutionFinalized(marketId, res.outcome);
     }
 
-    // ── Dispute mechanism ────────────────────────────────────────────────────
-
     function raiseDispute(bytes32 marketId, string calldata reason) external {
         Resolution storage res = resolutions[marketId];
         require(res.timestamp != 0,  "No resolution to dispute");
@@ -267,7 +255,6 @@ contract MarketResolver {
         }
     }
 
-    // ── Admin ─────────────────────────────────────────────────────────────────
 
     function setChainlinkFeed(bytes32 marketId, address feed, int256 targetPrice) external onlyOwner {
         chainlinkFeeds[marketId]   = feed;
@@ -289,8 +276,6 @@ contract MarketResolver {
         }
     }
 
-    // ── Views ─────────────────────────────────────────────────────────────────
-
     function getResolution(bytes32 marketId) external view returns (Resolution memory) {
         return resolutions[marketId];
     }
@@ -298,8 +283,7 @@ contract MarketResolver {
     function getDispute(bytes32 marketId) external view returns (Dispute memory) {
         return disputes[marketId];
     }
-
-    // ── Internal ─────────────────────────────────────────────────────────────
+─
 
     function _validateProposal(bytes32 marketId) internal view {
         if (registeredMarkets[marketId] == address(0)) revert MarketNotRegistered();
