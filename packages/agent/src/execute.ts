@@ -29,7 +29,14 @@ import type {
 } from "@repo/planner";
 import type { DecisionResult } from "./decide.js";
 import { ethers } from "ethers";
-import { getEthersSigner, PREDICTION_MARKET_ABI, ERC20_ABI } from "./contracts.js";
+import {
+  getEthersSigner,
+  PREDICTION_MARKET_ABI,
+  ERC20_ABI,
+  CONDITIONAL_PAYMENT_ABI,
+  OutcomeIndex,
+  PayoffType,
+} from "./contracts.js";
 
 export interface ExecutionResult {
   actionId: string;
@@ -41,6 +48,56 @@ export interface ExecutionResult {
   skipped: boolean;
   skipReason?: string;
   executedAt: string;
+}
+
+/**
+ * Creates a ConditionalPayment locking a performance fee in escrow.
+ * The fee is released to the treasury ONLY if the agent's predicted outcome is correct.
+ * Silently no-ops if CONDITIONAL_PAYMENT_ADDRESS or TREASURY_ADDRESS are not configured.
+ */
+async function createConditionalPayment(
+  signer: ReturnType<typeof getEthersSigner>,
+  marketAddress: string,
+  isYes: boolean,
+  amountMicroUsdt: bigint
+): Promise<string | null> {
+  const cpAddress   = process.env["CONDITIONAL_PAYMENT_ADDRESS"];
+  const treasury    = process.env["TREASURY_ADDRESS"];
+  const usdtAddress = process.env["USDT_CONTRACT_ADDRESS"];
+  if (!cpAddress || !treasury || !usdtAddress) return null;
+
+  // Performance fee: 1% of position, minimum 1 USDT (1_000_000 micro)
+  const feeAmount = amountMicroUsdt / 100n < 1_000_000n ? 1_000_000n : amountMicroUsdt / 100n;
+
+  // marketId is the address zero-padded to 32 bytes
+  const marketId = ethers.zeroPadValue(marketAddress, 32);
+  const trigger  = isYes ? OutcomeIndex.YES : OutcomeIndex.NO;
+
+  // Expiry: 60 days from now (well past any market close + dispute window)
+  const expiresAt = BigInt(Math.floor(Date.now() / 1000) + 60 * 24 * 60 * 60);
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const usdt = new ethers.Contract(usdtAddress, ERC20_ABI, signer) as any;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const cp   = new ethers.Contract(cpAddress, CONDITIONAL_PAYMENT_ABI, signer) as any;
+
+  // Approve fee amount to ConditionalPayment contract
+  const approveTx = await usdt.approve(cpAddress, feeAmount);
+  await approveTx.wait();
+
+  const tx = await cp.createPayment(
+    treasury,
+    marketAddress,
+    marketId,
+    usdtAddress,
+    feeAmount,
+    trigger,
+    PayoffType.BINARY,
+    "0x",        // no custom payoff curve
+    expiresAt
+  );
+  const receipt = await tx.wait();
+  return receipt.hash as string;
 }
 
 function getMarketContractAddress(marketId: string): string | null {
@@ -104,6 +161,15 @@ async function executeEnterMarket(
     const feeWei = BigInt(receipt.gasUsed) * BigInt(receipt.gasPrice ?? 0);
 
     console.log(`    ✓ TX: ${receipt.hash} | fee: ${feeWei} wei`);
+
+    // Lock a performance fee in ConditionalPayment — released only if prediction is correct
+    try {
+      const cpHash = await createConditionalPayment(signer, contractAddress, isYes, action.amountMicroUsdt);
+      if (cpHash) console.log(`    ✓ ConditionalPayment created: ${cpHash}`);
+    } catch (cpErr) {
+      console.warn(`    ⚠ ConditionalPayment skipped: ${cpErr instanceof Error ? cpErr.message : cpErr}`);
+    }
+
     return { ...base, success: true, txHash: receipt.hash, feeWei, skipped: false };
   } catch (err) {
     const error = err instanceof Error ? err.message : String(err);

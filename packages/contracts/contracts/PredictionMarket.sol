@@ -6,6 +6,7 @@ import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import "./OutcomeToken.sol";
+import "./iMarket.sol";
 
 /**
  * @title PredictionMarket
@@ -217,6 +218,42 @@ contract PredictionMarket is Ownable, ReentrancyGuard {
         uint256 total = yesReserve + noReserve;
         if (total == 0) return 5e17; // 50% default
         return (noReserve * 1e18) / total;
+    }
+
+    /**
+     * @notice Returns market state in the IMarket.MarketInfo format.
+     * @dev    Enables ConditionalPayment and other IMarket-compatible contracts
+     *         to read this market's state without knowing its internal layout.
+     *
+     *         Enum mapping (values are identical, so direct uint8 cast is safe):
+     *           Outcome.UNRESOLVED (0) → OutcomeIndex.INVALID (0)
+     *           Outcome.YES        (1) → OutcomeIndex.YES     (1)
+     *           Outcome.NO         (2) → OutcomeIndex.NO      (2)
+     */
+    function getMarketInfo() external view returns (IMarket.MarketInfo memory info) {
+        IMarket.MarketState state;
+        if (resolvedOutcome != Outcome.UNRESOLVED) {
+            state = IMarket.MarketState.RESOLVED;
+        } else if (block.timestamp >= closingTime) {
+            state = IMarket.MarketState.CLOSED;
+        } else {
+            state = IMarket.MarketState.OPEN;
+        }
+
+        info = IMarket.MarketInfo({
+            marketId:        bytes32(uint256(uint160(address(this)))),
+            question:        question,
+            createdAt:       0,
+            closesAt:        uint64(closingTime),
+            resolvesAt:      0,
+            state:           state,
+            resolution:      IMarket.OutcomeIndex(uint8(resolvedOutcome)), // safe: enums share same values
+            collateralToken: address(usdt),
+            yesToken:        address(yesToken),
+            noToken:         address(noToken),
+            totalLiquidity:  totalDeposited,
+            feeBps:          feeBps
+        });
     }
 
     /**
