@@ -1,8 +1,19 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import "./AgentVault.sol";
 import "./iMarket.sol";
+
+/**
+ * @dev Minimal vault interface for StrategyManager.
+ *      Full implementation is in AgentVault.sol / a future vault upgrade.
+ */
+interface IAgentVaultExtended {
+    function deployCapital(bytes32 marketId, address market, address token, uint256 amount, IMarket.OutcomeIndex outcome, uint256 minOut) external;
+    function withdrawCapital(bytes32 marketId, IMarket.OutcomeIndex outcome, uint256 amount, uint256 minOut) external;
+    function provideLiquidity(bytes32 marketId, address market, address token, uint256 amount, uint256 minOut) external;
+    function withdrawLiquidity(bytes32 marketId, uint256 lpShares, uint256 minOut) external;
+    function claimWinnings(bytes32 marketId) external returns (uint256 payout);
+}
 
 /**
  * @title StrategyManager
@@ -35,7 +46,7 @@ contract StrategyManager {
         uint256 lastExecuted;
     }
 
-    AgentVault public immutable vault;
+    IAgentVaultExtended public immutable vault;
     address    public agentKey;
     address    public owner;
 
@@ -62,7 +73,7 @@ contract StrategyManager {
     error InvalidBundle();
 
     constructor(address _vault, address _agentKey) {
-        vault    = AgentVault(_vault);
+        vault    = IAgentVaultExtended(_vault);
         agentKey = _agentKey;
         owner    = msg.sender;
 
