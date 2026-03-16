@@ -1,8 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.20;
 
-import "../interfaces/IERC20.sol";
-import "../interfaces/IMarket.sol";
+import "./IERC20.sol";
+import "./iMarket.sol";
 
 
  
