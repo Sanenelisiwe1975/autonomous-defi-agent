@@ -5,7 +5,7 @@
   "description": "Solidity smart contracts — AgentVault, PredictionMarket, OutcomeToken, MarketFactory",
   "license": "Apache-2.0",
   "scripts": {
-    "build": "hardhat compile",
+    "build": "hardhat compile --config hardhat.compile.cjs",
     "test": "hardhat test",
     "deploy:sepolia": "hardhat run scripts/deploy.ts --network sepolia",
     "deploy:local": "hardhat run scripts/deploy.ts --network localhost",
