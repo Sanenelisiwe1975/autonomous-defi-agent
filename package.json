@@ -13,6 +13,8 @@
     "agent:dev": "turbo run dev --filter=@repo/agent"
   },
   "devDependencies": {
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
     "hardhat": "^3.1.12",
     "prettier": "^3.7.4",
     "turbo": "^2.8.16",
