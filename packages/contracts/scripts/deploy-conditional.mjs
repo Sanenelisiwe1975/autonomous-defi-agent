@@ -57,11 +57,11 @@ console.log("Deployer:", deployer.address);
 // ── Load artifacts ────────────────────────────────────────────────────────────
 const artifactsBase = resolve(__dir, "../artifacts/contracts");
 
-function loadArtifact(name) {
-  return require(`${artifactsBase}/${name}.sol/${name}.json`);
+function loadArtifact(name, folder) {
+  return require(`${artifactsBase}/${folder ?? name}.sol/${name}.json`);
 }
 
-const ConditionalPaymentArtifact = loadArtifact("ConditionalPayment");
+const ConditionalPaymentArtifact = loadArtifact("ConditionalPayment", "ConditionPayment");
 const PredictionMarketArtifact   = loadArtifact("PredictionMarket");
 
 const RESOLVER_ABI = [
