@@ -4,7 +4,6 @@ pragma solidity ^0.8.20;
 import "./IERC20Extended.sol";
 
 
-
 contract SubscriptionManager {
 
     enum Plan { FREE, BASIC, PRO, INSTITUTIONAL }
@@ -113,7 +112,6 @@ contract SubscriptionManager {
         emit Subscribed(msg.sender, plan, paidUntil);
     }
 
-    
 
     function subscribeWithPermit(
         Plan    plan,
@@ -162,14 +160,12 @@ contract SubscriptionManager {
             sub.totalPaid += price;
         }
 
-        
         uint256 base   = sub.paidUntil > block.timestamp ? sub.paidUntil : block.timestamp;
         newPaidUntil   = base + config.period;
         sub.paidUntil  = newPaidUntil;
 
         emit Renewed(subscriber, newPaidUntil, price);
     }
-
 
     function cancel() external {
         SubscriptionRecord storage sub = subscriptions[msg.sender];
@@ -196,7 +192,6 @@ contract SubscriptionManager {
     function getSubscriptionRecord(address account) external view returns (SubscriptionRecord memory) {
         return subscriptions[account];
     }
-
 
     function configurePlan(
         Plan    plan,
