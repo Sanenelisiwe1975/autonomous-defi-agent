@@ -91,7 +91,7 @@ export function PortfolioChart({ snapshots }: Props) {
   const values      = data.map((d) => d.value);
   const minVal      = Math.min(...values);
   const maxVal      = Math.max(...values);
-  const isUp        = data[data.length - 1].value >= data[0].value;
+  const isUp        = (data[data.length - 1]?.value ?? 0) >= (data[0]?.value ?? 0);
   const strokeColor = isUp ? "#c8b560" : "#ff1744";
   const gradId      = "pgGrad";
 
