@@ -319,9 +319,9 @@ export default function PredictionMarketsPage() {
             </svg>
           </div>
           <span style={{ fontFamily: "'DM Serif Display', Georgia, serif", fontSize: 17, color: "#2a2020", letterSpacing: "-.2px" }}>
-            Presage
+            Autonomous Prediction Market
           </span>
-          <span style={{ fontSize: 11, color: "#c4b8b8", marginLeft: 2 }}>/ Autonomous Markets</span>
+          <span style={{ fontSize: 11, color: "#c4b8b8", marginLeft: 2 }}></span>
         </div>
 
         <div style={{ display: "flex", alignItems: "center", gap: 6, background: "#fdf9f7", border: "1px solid #ede8e8", borderRadius: 99, padding: "4px 6px" }}>
@@ -557,7 +557,6 @@ export default function PredictionMarketsPage() {
                 </div>
               ))}
 
-              {/* Cycle indicator */}
               <div style={{ marginTop: 16, padding: "12px 14px", background: "#fdf9f7", borderRadius: 10, border: "1px solid #ede8e8", display: "flex", alignItems: "center", justifyContent: "space-between" }}>
                 <span style={{ fontSize: 12, color: "#9a8e8e" }}>Next cycle in</span>
                 <span style={{ fontSize: 13, fontWeight: 500, color: "#2a2020", fontFamily: "'DM Serif Display', serif" }}>
