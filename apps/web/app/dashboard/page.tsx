@@ -51,6 +51,7 @@ const CATEGORY_COLOR: Record<string, { bg: string; text: string; border: string 
   Science:  { bg: "#f0f5f0", text: "#5f9a5f", border: "#cde0cd" },
   Sports:   { bg: "#fdf0f0", text: "#c97070", border: "#f5d0d0" },
   Macro:    { bg: "#f0f5f0", text: "#5f9a5f", border: "#cde0cd" },
+  Other:    { bg: "#f5f5f5", text: "#888888", border: "#e0e0e0" },
 };
 
 // ── Tiny sparkline SVG ─────────────────────────────────────────────────────────
@@ -88,7 +89,7 @@ function ProbBar({ yes }: { yes: number }) {
 
 // ── Market Card ────────────────────────────────────────────────────────────────
 function MarketCard({ market, onClick }: { market: Market; onClick: () => void }) {
-  const cat = CATEGORY_COLOR[market.category];
+  const cat = CATEGORY_COLOR[market.category] ?? CATEGORY_COLOR["Other"];
   const trendUp = (market.trend[market.trend.length - 1] ?? 0) >= (market.trend[0] ?? 0);
 
   return (
