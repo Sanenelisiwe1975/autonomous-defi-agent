@@ -29,6 +29,7 @@ export {
   ExitMarketActionSchema,
   RebalanceActionSchema,
   HoldActionSchema,
+  BridgeUsdt0ActionSchema,
   calculateRawEV,
   generateActionId,
   microUsdtToDisplay,
@@ -37,6 +38,7 @@ export {
   type EnterMarketAction,
   type ExitMarketAction,
   type RebalanceAction,
+  type BridgeUsdt0Action,
   type HoldAction,
 } from "./actions.js";
 

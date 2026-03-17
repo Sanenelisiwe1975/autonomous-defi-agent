@@ -18,6 +18,7 @@
 import {
   transferUSDT,
   transferXAUT,
+  bridgeUsdt0,
   type TransferResult,
 } from "@repo/wdk";
 import type { WalletAccountEvm } from "@tetherto/wdk-wallet-evm";
@@ -26,6 +27,7 @@ import type {
   EnterMarketAction,
   ExitMarketAction,
   RebalanceAction,
+  BridgeUsdt0Action,
 } from "@repo/planner";
 import type { DecisionResult } from "./decide.js";
 import { ethers } from "ethers";
@@ -272,6 +274,64 @@ async function executeRebalance(
 }
 
 
+async function executeBridgeUsdt0(
+  account: WalletAccountEvm,
+  action: BridgeUsdt0Action,
+  dryRun: boolean
+): Promise<ExecutionResult> {
+  const base: Omit<ExecutionResult, "success" | "txHash" | "feeWei" | "error" | "skipped"> = {
+    actionId: action.id,
+    actionType: "BRIDGE_USDT0" as AgentAction["type"],
+    executedAt: new Date().toISOString(),
+  };
+
+  const amountUsd = Number(action.amountMicroUsdt) / 1e6;
+  console.log(
+    `  → BRIDGE_USDT0 $${amountUsd.toFixed(2)} USDT → ${action.targetChain} | ` +
+    `reason: ${action.deploymentReason}`
+  );
+
+  if (dryRun) {
+    return { ...base, success: true, skipped: true, skipReason: "DRY_RUN" };
+  }
+
+  if (process.env["USDT0_BRIDGE_ENABLED"] !== "true") {
+    return {
+      ...base,
+      success: true,
+      skipped: true,
+      skipReason: "USDT0_BRIDGE_ENABLED not set (mainnet only)",
+    };
+  }
+
+  try {
+    const agentAddress = await account.getAddress();
+    const usdtAddress = process.env["USDT_CONTRACT_ADDRESS"]!;
+
+    const result = await bridgeUsdt0(account, {
+      targetChain: action.targetChain,
+      recipient: agentAddress,
+      tokenAddress: usdtAddress,
+      amount: action.amountMicroUsdt,
+    });
+
+    console.log(
+      `    ✓ TX: ${result.hash} | gas: ${result.fee} wei | bridge fee: ${result.bridgeFee} wei`
+    );
+    return {
+      ...base,
+      success: true,
+      txHash: result.hash,
+      feeWei: result.fee + result.bridgeFee,
+      skipped: false,
+    };
+  } catch (err) {
+    const error = err instanceof Error ? err.message : String(err);
+    console.error(`    ✗ Failed: ${error}`);
+    return { ...base, success: false, error, skipped: false };
+  }
+}
+
 /**
  * Executes all approved actions from the Decide phase using the WDK wallet.
  *
@@ -311,6 +371,9 @@ export async function execute(
         break;
       case "REBALANCE":
         result = await executeRebalance(account, action as RebalanceAction, dryRun);
+        break;
+      case "BRIDGE_USDT0":
+        result = await executeBridgeUsdt0(account, action as BridgeUsdt0Action, dryRun);
         break;
       default: {
         // HOLD is filtered above; this branch is unreachable at runtime

@@ -35,6 +35,16 @@ export {
   type TransferQuote,
 } from "./transactions.js";
 
+// USDT0 cross-chain bridge (LayerZero OFT)
+export {
+  bridgeUsdt0,
+  quoteBridgeUsdt0,
+  type BridgeTargetChain,
+  type BridgeParams,
+  type BridgeResult,
+  type BridgeQuote,
+} from "./bridge.js";
+
 // Account abstraction & portfolio snapshots
 export {
   getEthBalance,

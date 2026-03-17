@@ -64,17 +64,29 @@ export const HoldActionSchema = BaseActionSchema.extend({
   reason: z.string(),
 });
 
+export const BridgeUsdt0ActionSchema = BaseActionSchema.extend({
+  type: z.literal("BRIDGE_USDT0"),
+  /** Destination chain for the USDT0 LayerZero OFT bridge. */
+  targetChain: z.enum(["arbitrum", "polygon", "berachain"]),
+  /** Amount to bridge in micro-USDT (6 decimals, e.g. 10_000_000n = 10 USDT). */
+  amountMicroUsdt: z.bigint(),
+  /** Rationale for cross-chain deployment (e.g. "higher yield opportunity on Arbitrum"). */
+  deploymentReason: z.string(),
+});
+
 export const ActionSchema = z.discriminatedUnion("type", [
   EnterMarketActionSchema,
   ExitMarketActionSchema,
   RebalanceActionSchema,
   HoldActionSchema,
+  BridgeUsdt0ActionSchema,
 ]);
 
 export type EnterMarketAction = z.infer<typeof EnterMarketActionSchema>;
 export type ExitMarketAction = z.infer<typeof ExitMarketActionSchema>;
 export type RebalanceAction = z.infer<typeof RebalanceActionSchema>;
 export type HoldAction = z.infer<typeof HoldActionSchema>;
+export type BridgeUsdt0Action = z.infer<typeof BridgeUsdt0ActionSchema>;
 export type AgentAction = z.infer<typeof ActionSchema>;
 
 // ─── Action plan ──────────────────────────────────────────────────────────────
