@@ -13,7 +13,6 @@ import { readFileSync } from "fs";
 import { resolve, dirname } from "path";
 import { fileURLToPath } from "url";
 
-// Load .env from contracts directory
 const __dir = dirname(fileURLToPath(import.meta.url));
 const envPath = resolve(__dir, "../.env");
 const envVars = Object.fromEntries(
@@ -51,7 +50,6 @@ console.log("Creating market with:", wallet.address);
 const usdt    = new ethers.Contract(USDT_ADDRESS, ERC20_ABI, wallet);
 const factory = new ethers.Contract(FACTORY_ADDRESS, FACTORY_ABI, wallet);
 
-// ── Market params ─────────────────────────────────────────────────────────────
 const QUESTION    = "Will ETH price be above $2,500 within 7 days?";
 const closingTime = Math.floor(Date.now() / 1000) + 7 * 24 * 60 * 60;
 // Pass 0,0 for initial reserves to avoid the double-transfer bug in the deployed contract.
@@ -59,16 +57,13 @@ const closingTime = Math.floor(Date.now() / 1000) + 7 * 24 * 60 * 60;
 const SEED_YES    = 0n;
 const SEED_NO     = 0n;
 
-// ── Check balance ─────────────────────────────────────────────────────────────
 const balance = await usdt.balanceOf(wallet.address);
 console.log(`USDT balance: ${Number(balance) / 1e6} USDT`);
 
-// ── Create market (no seed, no approval needed) ───────────────────────────────
 console.log(`\nCreating market: "${QUESTION}"`);
 const tx = await factory.createMarket(QUESTION, closingTime, SEED_YES, SEED_NO);
 const receipt = await tx.wait();
 
-// Parse MarketCreated event
 const iface = new ethers.Interface(FACTORY_ABI);
 const marketAddress = receipt.logs
   .map((log) => { try { return iface.parseLog(log); } catch { return null; } })

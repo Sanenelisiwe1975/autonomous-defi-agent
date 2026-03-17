@@ -23,7 +23,6 @@ import { createRequire } from "module";
 const __dir   = dirname(fileURLToPath(import.meta.url));
 const require = createRequire(import.meta.url);
 
-// ── Load env ──────────────────────────────────────────────────────────────────
 const envPath = resolve(__dir, "../.env");
 const envVars = Object.fromEntries(
   readFileSync(envPath, "utf8")
@@ -40,10 +39,8 @@ const XAUT_ADDRESS    = envVars["XAUT_CONTRACT_ADDRESS"] ?? "0x68749665FF8D2d112
 // WDK wallet — will be authorised as aiOracle on MarketResolver
 const WDK_WALLET = "0xd4f54bB98BA78a813c82C78934191cBba3C33900";
 
-// Chainlink ETH/USD price feed on Sepolia
 const CHAINLINK_ETH_USD_SEPOLIA = "0x694AA1769357215DE4FAC081bf1f309aDC325306";
 
-// Target price: $2,500 (Chainlink uses 8 decimals)
 const ETH_PRICE_TARGET = BigInt(2500) * BigInt(1e8);
 
 if (!RPC_URL || !PRIVATE_KEY) {
@@ -58,15 +55,13 @@ console.log("Deployer:", deployer.address);
 console.log("AI Oracle (WDK wallet):", WDK_WALLET);
 console.log();
 
-// ── Load compiled artifacts ────────────────────────────────────────────────────
-// Hardhat artifacts path
 const artifactsBase = resolve(__dir, "../artifacts/contracts");
 
 function loadArtifact(name) {
   try {
     return require(`${artifactsBase}/${name}.sol/${name}.json`);
   } catch {
-    // Try without subdirectory
+  
     try {
       return require(`${artifactsBase}/${name}.json`);
     } catch {
@@ -75,7 +70,6 @@ function loadArtifact(name) {
   }
 }
 
-// ── Step 1: Compile check ────────────────────────────────────────────────────
 console.log("Loading compiled artifacts…");
 let MarketResolverArtifact, PredictionMarketArtifact;
 try {
@@ -87,7 +81,6 @@ try {
   process.exit(1);
 }
 
-// ── Step 2: Deploy MarketResolver ────────────────────────────────────────────
 console.log("Deploying MarketResolver…");
 
 const resolverFactory = new ethers.ContractFactory(
@@ -96,7 +89,6 @@ const resolverFactory = new ethers.ContractFactory(
   deployer
 );
 
-// Committee: 5 slots, all deployer for hackathon simplicity
 const committee = [
   deployer.address,
   deployer.address,
@@ -106,16 +98,15 @@ const committee = [
 ];
 
 const marketResolver = await resolverFactory.deploy(
-  deployer.address,  // owner
-  USDT_ADDRESS,      // collateral token for dispute bonds
-  committee,         // committee[5]
-  WDK_WALLET         // aiOracle
+  deployer.address, 
+  USDT_ADDRESS,      
+  committee,         
+  WDK_WALLET         
 );
 await marketResolver.waitForDeployment();
 const resolverAddress = await marketResolver.getAddress();
 console.log("✓ MarketResolver deployed:", resolverAddress);
 
-// ── Step 3: Deploy new PredictionMarket ───────────────────────────────────────
 console.log("\nDeploying new PredictionMarket…");
 
 const marketFactory = new ethers.ContractFactory(
@@ -143,24 +134,19 @@ console.log("✓ PredictionMarket deployed:", marketAddress);
 console.log("  Question:", QUESTION);
 console.log("  Closes:  ", new Date(closingTime * 1000).toISOString());
 
-// ── Step 4: Wire together ──────────────────────────────────────────────────────
 console.log("\nWiring contracts…");
 
-// market.setResolver(resolverAddress)
 const tx1 = await market.setResolver(resolverAddress);
 await tx1.wait();
 console.log("✓ market.setResolver() →", resolverAddress);
 
-// Derive deterministic bytes32 marketId from address
 const marketId = ethers.zeroPadValue(marketAddress, 32);
 console.log("  marketId:", marketId);
 
-// resolver.registerMarket(marketId, marketAddress)
 const tx2 = await marketResolver.registerMarket(marketId, marketAddress);
 await tx2.wait();
 console.log("✓ resolver.registerMarket()");
 
-// resolver.setChainlinkFeed(marketId, ETH_USD_FEED, 2500e8)
 const tx3 = await marketResolver.setChainlinkFeed(
   marketId,
   CHAINLINK_ETH_USD_SEPOLIA,
@@ -169,7 +155,6 @@ const tx3 = await marketResolver.setChainlinkFeed(
 await tx3.wait();
 console.log(`✓ resolver.setChainlinkFeed() — target $2,500 (${ETH_PRICE_TARGET})`);
 
-// ── Summary ────────────────────────────────────────────────────────────────────
 console.log("\n╔══════════════════════════════════════════════════════════╗");
 console.log("║           Resolver Deployment Complete                  ║");
 console.log("╚══════════════════════════════════════════════════════════╝");

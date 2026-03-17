@@ -23,7 +23,6 @@ import { createRequire } from "module";
 const __dir   = dirname(fileURLToPath(import.meta.url));
 const require = createRequire(import.meta.url);
 
-// ── Load env ──────────────────────────────────────────────────────────────────
 const envPath = resolve(__dir, "../.env");
 const envVars = Object.fromEntries(
   readFileSync(envPath, "utf8")
@@ -37,9 +36,8 @@ const PRIVATE_KEY      = envVars["DEPLOYER_PRIVATE_KEY"];
 const USDT_ADDRESS     = envVars["USDT_CONTRACT_ADDRESS"] ?? "0x7169D38820dfd117C3FA1f22a697dBA58d90BA06";
 const RESOLVER_ADDRESS = envVars["MARKET_RESOLVER_ADDRESS"] ?? "";
 
-// Chainlink ETH/USD on Sepolia
 const CHAINLINK_ETH_USD = "0x694AA1769357215DE4FAC081bf1f309aDC325306";
-const ETH_PRICE_TARGET  = BigInt(2500) * BigInt(1e8);  // $2,500 (8 dec)
+const ETH_PRICE_TARGET  = BigInt(2500) * BigInt(1e8); 
 
 if (!RPC_URL || !PRIVATE_KEY) {
   console.error("Missing RPC_URL or DEPLOYER_PRIVATE_KEY in .env");
@@ -54,7 +52,6 @@ const provider = new ethers.JsonRpcProvider(RPC_URL);
 const deployer = new ethers.Wallet(PRIVATE_KEY.trim(), provider);
 console.log("Deployer:", deployer.address);
 
-// ── Load artifacts ────────────────────────────────────────────────────────────
 const artifactsBase = resolve(__dir, "../artifacts/contracts");
 
 function loadArtifact(name, folder) {
@@ -69,7 +66,6 @@ const RESOLVER_ABI = [
   "function setChainlinkFeed(bytes32 marketId, address feed, int256 targetPrice) external",
 ];
 
-// ── Step 1: Deploy ConditionalPayment ────────────────────────────────────────
 console.log("\nDeploying ConditionalPayment…");
 
 const cpFactory = new ethers.ContractFactory(
@@ -83,7 +79,6 @@ await conditionalPayment.waitForDeployment();
 const cpAddress = await conditionalPayment.getAddress();
 console.log("✓ ConditionalPayment deployed:", cpAddress);
 
-// ── Step 2: Deploy new PredictionMarket (with getMarketInfo) ─────────────────
 console.log("\nDeploying new PredictionMarket (IMarket-compatible)…");
 
 const marketFactory = new ethers.ContractFactory(
@@ -99,9 +94,9 @@ const market = await marketFactory.deploy(
   QUESTION,
   USDT_ADDRESS,
   closingTime,
-  0n,   // no seed — agent seeds on first enterPosition
+  0n,   
   0n,
-  50n,  // 0.5% fee
+  50n,  
   deployer.address
 );
 await market.waitForDeployment();
@@ -110,13 +105,11 @@ console.log("✓ PredictionMarket deployed:", marketAddress);
 console.log("  Question:", QUESTION);
 console.log("  Closes:  ", new Date(closingTime * 1000).toISOString());
 
-// ── Step 3: Set MarketResolver as the resolver on the new market ─────────────
 console.log("\nWiring MarketResolver as resolver…");
 const tx1 = await market.setResolver(RESOLVER_ADDRESS);
 await tx1.wait();
 console.log("✓ market.setResolver()");
 
-// ── Step 4: Register new market with MarketResolver ──────────────────────────
 const resolver = new ethers.Contract(RESOLVER_ADDRESS, RESOLVER_ABI, deployer);
 const marketId = ethers.zeroPadValue(marketAddress, 32);
 
@@ -128,7 +121,6 @@ const tx3 = await resolver.setChainlinkFeed(marketId, CHAINLINK_ETH_USD, ETH_PRI
 await tx3.wait();
 console.log("✓ resolver.setChainlinkFeed() — target $2,500");
 
-// ── Summary ───────────────────────────────────────────────────────────────────
 console.log("\n╔══════════════════════════════════════════════════════════╗");
 console.log("║         Conditional Payment Deployment Complete         ║");
 console.log("╚══════════════════════════════════════════════════════════╝");

@@ -31,19 +31,13 @@ async function main() {
     throw new Error("MARKET_FACTORY_ADDRESS not set in .env");
   }
 
-  // ── Market parameters ────────────────────────────────────────────────────
-
   const QUESTION = "Will ETH price be above $2,500 within 7 days?";
 
-  // Closing time: 7 days from now
   const closingTime = Math.floor(Date.now() / 1000) + 7 * 24 * 60 * 60;
 
-  // Seed liquidity: $50 YES + $50 NO = $100 total (balanced = 50/50 probability)
   const SEED_YES = ethers.parseUnits("50", 6);  // 50 USDT
   const SEED_NO  = ethers.parseUnits("50", 6);  // 50 USDT
   const SEED_TOTAL = SEED_YES + SEED_NO;
-
-  // ── Check balance ─────────────────────────────────────────────────────────
 
   const usdt = new ethers.Contract(USDT_ADDRESS, ERC20_ABI, deployer);
   const balance: bigint = await usdt.balanceOf(deployer.address);
@@ -55,14 +49,11 @@ async function main() {
     );
   }
 
-  // ── Approve factory to spend seed liquidity ───────────────────────────────
-
   console.log(`\nApproving ${ethers.formatUnits(SEED_TOTAL, 6)} USDT for factory…`);
   const approveTx = await usdt.approve(FACTORY_ADDRESS, SEED_TOTAL);
   await approveTx.wait();
   console.log("✓ Approved");
 
-  // ── Create the market ─────────────────────────────────────────────────────
 
   const factory = await ethers.getContractAt("MarketFactory", FACTORY_ADDRESS);
 
@@ -78,7 +69,6 @@ async function main() {
   );
   const receipt = await tx.wait();
 
-  // Parse the MarketCreated event to get the deployed address
   const event = receipt?.logs
     .map((log: { topics: string[]; data: string }) => {
       try { return factory.interface.parseLog(log); } catch { return null; }
