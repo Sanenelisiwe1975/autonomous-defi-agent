@@ -15,8 +15,7 @@
  */
 
 import type { WalletAccountEvm } from "@tetherto/wdk-wallet-evm";
-// eslint-disable-next-line @typescript-eslint/no-require-imports
-const Usdt0ProtocolEvm = require("@tetherto/wdk-protocol-bridge-usdt0-evm").default;
+import Usdt0ProtocolEvm from "@tetherto/wdk-protocol-bridge-usdt0-evm";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
