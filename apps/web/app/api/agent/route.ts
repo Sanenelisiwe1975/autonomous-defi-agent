@@ -64,7 +64,9 @@ async function getFromLog(): Promise<AgentState | null> {
       portfolio: last.portfolio as AgentState["portfolio"],
       lastCycleMs: last.durationMs as number,
       executions: last.executions as AgentState["executions"],
-      marketSentiment: (last.plan as { marketSentiment: string }).marketSentiment,
+      marketSentiment: (last.plan as { marketSentiment: string; reasoning: string; summary: string }).marketSentiment,
+      reasoning: (last.plan as { reasoning: string }).reasoning ?? "",
+      summary: (last.plan as { summary: string }).summary ?? "",
       updatedAt: new Date().toISOString(),
     };
   } catch {
@@ -84,6 +86,8 @@ export async function GET() {
         lastCycleMs: 0,
         executions: [],
         marketSentiment: "NEUTRAL",
+        reasoning: "",
+        summary: "",
         updatedAt: new Date().toISOString(),
         status: "WAITING",
       },
