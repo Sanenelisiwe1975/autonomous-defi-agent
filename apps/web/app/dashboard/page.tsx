@@ -89,7 +89,7 @@ function ProbBar({ yes }: { yes: number }) {
 // ── Market Card ────────────────────────────────────────────────────────────────
 function MarketCard({ market, onClick }: { market: Market; onClick: () => void }) {
   const cat = CATEGORY_COLOR[market.category];
-  const trendUp = market.trend[market.trend.length - 1] >= market.trend[0];
+  const trendUp = (market.trend[market.trend.length - 1] ?? 0) >= (market.trend[0] ?? 0);
 
   return (
     <div
