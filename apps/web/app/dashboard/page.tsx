@@ -357,6 +357,9 @@ export default function PredictionMarketsPage() {
   const [trades, setTrades]                   = useState<Trade[]>([]);
   const [conditionalPayments, setConditionalPayments] = useState<ConditionalPayment[]>([]);
   const [subscriptionState, setSubscriptionState]     = useState<SubscriptionState | null>(null);
+  const [walletAddress, setWalletAddress]             = useState<string | null>(null);
+  const [userSubPlan, setUserSubPlan]                 = useState<string | null>(null);
+  const [connectingWallet, setConnectingWallet]       = useState(false);
 
   const fetchAgent        = useCallback(() => fetch("/api/agent").then(r => r.json()).then(setAgentState).catch(() => {}), []);
   const fetchMarkets      = useCallback(() => fetch("/api/markets").then(r => r.json()).then((d: { markets: LiveMarket[] }) => {
@@ -433,6 +436,24 @@ export default function PredictionMarketsPage() {
     const pct = ((last - first) / first) * 100;
     return { pct: pct.toFixed(1), positive: pct >= 0 };
   })();
+
+  const connectWallet = useCallback(async () => {
+    const eth = (window as typeof window & { ethereum?: { request: (a: { method: string; params?: unknown[] }) => Promise<string[]>; on: (e: string, cb: (accs: string[]) => void) => void } }).ethereum;
+    if (!eth) { alert("MetaMask not found. Please install it from metamask.io"); return; }
+    setConnectingWallet(true);
+    try {
+      const accounts = await eth.request({ method: "eth_requestAccounts" });
+      const addr = accounts[0] ?? null;
+      setWalletAddress(addr);
+      if (addr && subscriptionState) {
+        const plan = await fetch(`/api/subscription/user?address=${addr}`).then(r => r.json()).then(d => d.plan).catch(() => null);
+        setUserSubPlan(plan);
+      }
+      eth.on("accountsChanged", (accs: string[]) => setWalletAddress(accs[0] ?? null));
+    } finally {
+      setConnectingWallet(false);
+    }
+  }, [subscriptionState]);
 
   const agentRunning = agentState?.status === "RUNNING";
 
