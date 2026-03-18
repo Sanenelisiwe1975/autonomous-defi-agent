@@ -430,6 +430,7 @@ export default function PredictionMarketsPage() {
                   </div>
                 </div>
               ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
                 <div style={{ background: "#fff", border: "1px solid #ede8e8", borderRadius: 16, padding: "22px" }}>
                   <p style={{ fontFamily: "'DM Serif Display', serif", fontSize: 15, color: "#2a2020", marginBottom: 16 }}>Top movers</p>
                   {[...markets].sort((a, b) => Math.abs((b.trend[b.trend.length-1] ?? 0) - (b.trend[0] ?? 0)) - Math.abs((a.trend[a.trend.length-1] ?? 0) - (a.trend[0] ?? 0))).slice(0, 4).map(m => {
@@ -446,6 +447,29 @@ export default function PredictionMarketsPage() {
                       </div>
                     );
                   })}
+                </div>
+
+                {/* Subscription tiers */}
+                {subscriptionState && (
+                  <div style={{ background: "#fff", border: "1px solid #ede8e8", borderRadius: 16, padding: "22px" }}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
+                      <p style={{ fontFamily: "'DM Serif Display', serif", fontSize: 15, color: "#2a2020" }}>Subscriptions</p>
+                      <span style={{ fontSize: 11, background: "#f0f5f0", border: "1px solid #cde0cd", color: "#5f9a5f", borderRadius: 99, padding: "3px 10px", fontWeight: 500 }}>
+                        {subscriptionState.activeSubscribers} active
+                      </span>
+                    </div>
+                    <p style={{ fontSize: 11, color: "#c4b8b8", marginBottom: 14 }}>${subscriptionState.totalRevenue} USD₮ total revenue</p>
+                    {subscriptionState.plans.filter(p => p.name !== "FREE").map(plan => (
+                      <div key={plan.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "9px 0", borderBottom: "1px solid #f5f0f0" }}>
+                        <div>
+                          <span style={{ fontSize: 12, fontWeight: 600, color: "#2a2020" }}>{plan.name}</span>
+                          <span style={{ fontSize: 11, color: "#c4b8b8", marginLeft: 6 }}>{plan.periodDays}d</span>
+                        </div>
+                        <span style={{ fontSize: 13, fontWeight: 500, color: "#7b62c9" }}>{plan.priceUsdt} USD₮</span>
+                      </div>
+                    ))}
+                  </div>
+                )}
                 </div>
               )}
             </div>
