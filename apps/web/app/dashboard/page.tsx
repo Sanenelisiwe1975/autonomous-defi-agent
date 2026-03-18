@@ -1,8 +1,9 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { TradeTable } from "../../components/TradeTable";
 import { PortfolioChart } from "../../components/PortfolioChart";
+import { metadata } from '../layout';
 
 
 interface AgentState {
@@ -127,6 +128,59 @@ const MOCK_MARKETS: Market[] = [
   { id: 6, title: "Global inflation drops below 2% average",  category: "Macro",   yesProb: 52, volume: "$3.2M",  volumeRaw: 3200000, closes: "Sep 30", daysLeft: 195, trend: [45,47,50,51,52,52], hot: true,  agentYesUsdt: null, agentNoUsdt: null },
 ];
 
+const CATEGORY_KEYWORDS: [string, RegExp][] = [
+  ["Crypto",   /\b(btc|eth|bitcoin|ethereum|crypto|defi|nft|token|solana|usdt|stablecoin|blockchain)\b/],
+  ["Macro",    /\b(fed|federal reserve|rate|gdp|inflation|recession|macro|dollar|treasury|economy|central bank|ecb|cpi)\b/],
+  ["Politics", /\b(election|president|congress|senate|vote|poll|government|policy|war|ukraine|china|parliament|referendum)\b/],
+  ["Science",  /\b(ai|artificial intelligence|science|nasa|mars|space|research|gene|medicine|climate|physics|cern|nobel|fusion|vaccine)\b/],
+  ["Sports",   /\b(nba|nfl|soccer|world cup|champion|sport|tennis|cricket|football|basketball|formula|olympic|f1)\b/],
+];
+
+
+function deriveCategory(question: string): string {
+  const q = question.toLowerCase();
+  for (const [cat, re] of CATEGORY_KEYWORDS) {
+    if (re.test(q)) return cat;
+  }
+  return "Other";
+}
+
+// ── FIX 2: deterministic trend — no Math.random() ────────────────────────────
+// Original used Math.random(), causing sparklines to re-roll on every render
+// and cards to flicker. We seed from the market address instead.
+
+function deterministicTrend(seed: string, yesProb: number): number[] {
+  let h = 0;
+  for (let i = 0; i < seed.length; i++) {
+    h = (Math.imul(31, h) + seed.charCodeAt(i)) >>> 0;
+  }
+  return Array.from({ length: 6 }, (_, k) => {
+    h = (Math.imul(1664525, h) + 1013904223) >>> 0;
+    const jitter = ((h & 0xff) / 255) * 6 - 3;
+    return Math.max(1, Math.min(99, Math.round(yesProb + (k - 3) * 2 + jitter)));
+  });
+}
+
+
+function liveToMarket(m: LiveMarket,): Market {
+  const yesProb    = Math.round(m.yesProbability * 100);
+  const closes     = new Date(m.closesAt).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  const volumeRaw  = Number(m.volumeUsdt);
+  const volume    = volumeRaw >= 1_000_000 ? `$${(volumeRaw / 1_000_000).toFixed(1)}M`
+    : volumeRaw >= 1_000 ? `$${(volumeRaw / 1_000).toFixed(0)}K`
+    : `$${volumeRaw.toFixed(0)}`;
+
+  const category   = deriveCategory(m.question);
+  const trend      = deterministicTrend(m.address, yesProb);
+  const hasAgentPos = m.agentYesUsdt !== null || m.agentNoUsdt !== null;
+  return {
+    id: m.address, title: m.question, category,
+    yesProb, volume, volumeRaw, closes, daysLeft: m.daysLeft ?? 0,
+    trend, hot: hasAgentPos, address: m.address,
+    agentYesUsdt: m.agentYesUsdt, agentNoUsdt: m.agentNoUsdt,
+  };
+}
+
 const CATEGORY_COLOR: Record<string, { bg: string; text: string; border: string }> = {
   Crypto:   { bg: "#f3f0fb", text: "#7b62c9", border: "#ddd5f5" },
   Politics: { bg: "#fdf0f0", text: "#c97070", border: "#f5d0d0" },
@@ -135,34 +189,6 @@ const CATEGORY_COLOR: Record<string, { bg: string; text: string; border: string 
   Macro:    { bg: "#f0f5f0", text: "#5f9a5f", border: "#cde0cd" },
   Other:    { bg: "#f5f5f5", text: "#888888", border: "#e0e0e0" },
 };
-
-function liveToMarket(m: LiveMarket, i: number): Market {
-  const yesProb    = Math.round(m.yesProbability * 100);
-  const closes     = new Date(m.closesAt).toLocaleDateString("en-US", { month: "short", day: "numeric" });
-  const volumeRaw  = Number(m.volumeUsdt);
-  const volume     = volumeRaw >= 1_000_000
-    ? `$${(volumeRaw / 1_000_000).toFixed(1)}M`
-    : volumeRaw >= 1_000
-    ? `$${(volumeRaw / 1_000).toFixed(0)}K`
-    : `$${volumeRaw.toFixed(0)}`;
-  const trend = Array.from({ length: 6 }, (_, k) =>
-    Math.max(1, Math.min(99, yesProb + (k - 3) * 2 + Math.round(Math.random() * 3 - 1)))
-  );
-  const q = m.question.toLowerCase();
-  const category =
-    /\b(btc|eth|bitcoin|ethereum|crypto|defi|nft|token|solana|usdt|stablecoin|blockchain)\b/.test(q) ? "Crypto" :
-    /\b(fed|rate|gdp|inflation|recession|macro|dollar|treasury|economy|central bank)\b/.test(q) ? "Macro" :
-    /\b(ai|science|nasa|mars|space|research|gene|medicine|climate|physics)\b/.test(q) ? "Science" :
-    /\b(election|president|congress|senate|vote|poll|government|policy|war|ukraine|china)\b/.test(q) ? "Politics" :
-    /\b(nba|nfl|soccer|world cup|champion|sport|tennis|cricket|football|basketball)\b/.test(q) ? "Sports" :
-    "Other";
-  return {
-    id: m.address, title: m.question, category,
-    yesProb, volume, volumeRaw, closes, daysLeft: m.daysLeft ?? 0,
-    trend, hot: i < 2, address: m.address,
-    agentYesUsdt: m.agentYesUsdt, agentNoUsdt: m.agentNoUsdt,
-  };
-}
 
 function Spark({ data, color }: { data: number[]; color: string }) {
   const w = 64, h = 28;
@@ -333,7 +359,16 @@ export default function PredictionMarketsPage() {
   const [subscriptionState, setSubscriptionState]     = useState<SubscriptionState | null>(null);
 
   const fetchAgent        = useCallback(() => fetch("/api/agent").then(r => r.json()).then(setAgentState).catch(() => {}), []);
-  const fetchMarkets      = useCallback(() => fetch("/api/markets").then(r => r.json()).then((d: { markets: LiveMarket[] }) => setLiveMarkets(d.markets ?? [])).catch(() => {}), []);
+  const fetchMarkets      = useCallback(() => fetch("/api/markets").then(r => r.json()).then((d: { markets: LiveMarket[] }) => {
+    const incoming = d.markets ?? [];
+    if (incoming. length > 0) {
+      setFilter(prev => {
+        if(prev == "All") return prev;
+        const cats = new Set(incoming.map(m => deriveCategory(m.question)));
+        return cats.has(prev) ? prev : "All";
+      })
+    }
+  }).catch(()=>{}), []);   
   const fetchVault        = useCallback(() => fetch("/api/vault").then(r => r.json()).then((d: VaultState & { error?: string }) => { if (!d.error) setVaultState(d); }).catch(() => {}), []);
   const fetchRes          = useCallback(() => fetch("/api/resolutions").then(r => r.json()).then((d: { resolutions: Resolution[] }) => setResolutions(d.resolutions ?? [])).catch(() => {}), []);
   const fetchPortfolio    = useCallback(() => fetch("/api/portfolio").then(r => r.json()).then((d: { snapshots: PortfolioSnapshot[] }) => setSnapshots(d.snapshots ?? [])).catch(() => {}), []);
@@ -357,11 +392,18 @@ export default function PredictionMarketsPage() {
     };
   }, [fetchAgent, fetchMarkets, fetchVault, fetchRes, fetchPortfolio, fetchTrades]);
 
-  const markets: Market[] = liveMarkets.length > 0
-    ? liveMarkets.map((m, i) => liveToMarket(m, i))
-    : MOCK_MARKETS;
+  const markets = useMemo<Market[]>(
+  () =>
+    liveMarkets.length > 0
+      ? liveMarkets.map(m => liveToMarket(m))
+      : MOCK_MARKETS,
+  [liveMarkets]
+);
 
-  const categories = ["All", "Crypto", "Macro", "Politics", "Science", "Sports", "Other"];
+  // FIX 7: filter tabs only show categories that exist in current data
+  const availableCategories = ["All", "Crypto", "Macro", "Politics", "Science", "Sports", "Other"].filter(cat =>
+    cat === "All" || markets.some(m => m.category === cat)
+  );
 
   const filtered = markets
     .filter(m => filter === "All" || m.category === filter)
@@ -491,6 +533,13 @@ export default function PredictionMarketsPage() {
                 ))}
               </div>
 
+              {liveMarkets.length === 0 && (
+                <div style={{ background: "#fffbf0", border: "1px solid #f0e0a0", borderRadius: 10, padding: "9px 14px", marginBottom: 14, fontSize: 12, color: "#c49a00" }}>
+                  Showing demo markets — agent is not yet returning live data
+                </div>
+              )}
+
+
               {/* Search + sort + filter row */}
               <div style={{ display: "flex", gap: 10, marginBottom: 16, alignItems: "center", flexWrap: "wrap" }}>
                 <div style={{ position: "relative", flex: 1, minWidth: 180 }}>
@@ -515,7 +564,7 @@ export default function PredictionMarketsPage() {
                   ))}
                 </div>
                 <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
-                  {categories.map(c => (
+                  {availableCategories.map(c => (
                     <button key={c} className={`filter-pill ${filter === c ? "active" : ""}`} onClick={() => setFilter(c)}>{c}</button>
                   ))}
                 </div>
@@ -563,6 +612,11 @@ export default function PredictionMarketsPage() {
                       </div>
                     ))}
                   </div>
+                  {selected.address && (
+                    <a href={`https://sepolia.etherscan.io/address/${selected.address}`} target="_blank" rel="noreferrer" style={{ display: "block", textAlign: "center", fontSize: 11, color: "#b9a8e8", textDecoration: "none", marginBottom: 12 }}>
+                      View on Etherscan ↗
+                    </a>
+                  )}
                   <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
                     <button className="place-btn" style={{ background: "#f0f5f0", color: "#5f9a5f" }}>Buy YES — {selected.yesProb}¢</button>
                     <button className="place-btn" style={{ background: "#fdf0f0", color: "#c97070" }}>Buy NO — {100 - selected.yesProb}¢</button>
@@ -587,8 +641,6 @@ export default function PredictionMarketsPage() {
                     );
                   })}
                 </div>
-
-                {/* Subscription tiers */}
                 {subscriptionState && (
                   <div style={{ background: "#fff", border: "1px solid #ede8e8", borderRadius: 16, padding: "22px" }}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 4 }}>
@@ -661,8 +713,6 @@ export default function PredictionMarketsPage() {
                 </div>
               )}
             </div>
-
-            {/* Right sidebar */}
             <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
               {/* Vault panel */}
               <div style={{ background: "#fff", border: "1px solid #ede8e8", borderRadius: 16, padding: "22px" }}>
@@ -827,7 +877,7 @@ export default function PredictionMarketsPage() {
                 <TradeTable trades={trades} />
               </div>
 
-              {/* Last executions from current cycle */}
+              {/* Last executions from current cycle */}metadata
               {agentState && agentState.executions.length > 0 && (
                 <div style={{ background: "#fff", border: "1px solid #ede8e8", borderRadius: 16, padding: "22px" }}>
                   <p style={{ fontFamily: "'DM Serif Display', serif", fontSize: 16, marginBottom: 16 }}>Last cycle actions</p>
