@@ -137,13 +137,23 @@ const CATEGORY_COLOR: Record<string, { bg: string; text: string; border: string 
 };
 
 function liveToMarket(m: LiveMarket, i: number): Market {
-  const yesProb = Math.round(m.yesProbability * 100);
-  const closes  = new Date(m.closesAt).toLocaleDateString("en-US", { month: "short", day: "numeric" });
-  const volume  = `$${Number(m.volumeUsdt).toLocaleString("en-US", { maximumFractionDigits: 0 })}`;
-  const trend   = Array.from({ length: 6 }, (_, k) =>
+  const yesProb    = Math.round(m.yesProbability * 100);
+  const closes     = new Date(m.closesAt).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+  const volumeRaw  = Number(m.volumeUsdt);
+  const volume     = volumeRaw >= 1_000_000
+    ? `$${(volumeRaw / 1_000_000).toFixed(1)}M`
+    : volumeRaw >= 1_000
+    ? `$${(volumeRaw / 1_000).toFixed(0)}K`
+    : `$${volumeRaw.toFixed(0)}`;
+  const trend = Array.from({ length: 6 }, (_, k) =>
     Math.max(1, Math.min(99, yesProb + (k - 3) * 2 + Math.round(Math.random() * 3 - 1)))
   );
-  return { id: m.address, title: m.question, category: "Crypto", yesProb, volume, closes, trend, hot: i < 2, address: m.address };
+  return {
+    id: m.address, title: m.question, category: "Crypto",
+    yesProb, volume, volumeRaw, closes, daysLeft: m.daysLeft ?? 0,
+    trend, hot: i < 2, address: m.address,
+    agentYesUsdt: m.agentYesUsdt, agentNoUsdt: m.agentNoUsdt,
+  };
 }
 
 function Spark({ data, color }: { data: number[]; color: string }) {
@@ -161,44 +171,75 @@ function Spark({ data, color }: { data: number[]; color: string }) {
   );
 }
 
-function ProbBar({ yes }: { yes: number }) {
-  const no = 100 - yes;
-  return (
-    <div style={{ display: "flex", flexDirection: "column", gap: 5 }}>
-      <div style={{ display: "flex", height: 6, borderRadius: 99, overflow: "hidden", gap: 2 }}>
-        <div style={{ width: `${yes}%`, background: "#9ec89e", borderRadius: "99px 0 0 99px", transition: "width .4s ease" }} />
-        <div style={{ width: `${no}%`, background: "#e8a8a8", borderRadius: "0 99px 99px 0", transition: "width .4s ease" }} />
-      </div>
-      <div style={{ display: "flex", justifyContent: "space-between" }}>
-        <span style={{ fontSize: 11, color: "#5f9a5f", fontWeight: 500 }}>YES {yes}%</span>
-        <span style={{ fontSize: 11, color: "#c97070" }}>NO {no}%</span>
-      </div>
-    </div>
-  );
-}
-
 function MarketCard({ market, onClick }: { market: Market; onClick: () => void }) {
-  const cat = CATEGORY_COLOR[market.category] ?? { bg: "#f5f5f5", text: "#888888", border: "#e0e0e0" };
-  const trendUp = (market.trend[market.trend.length - 1] ?? 0) >= (market.trend[0] ?? 0);
+  const cat      = CATEGORY_COLOR[market.category] ?? { bg: "#f5f5f5", text: "#888888", border: "#e0e0e0" };
+  const trendUp  = (market.trend[market.trend.length - 1] ?? 0) >= (market.trend[0] ?? 0);
+  const yesPrice = (market.yesProb / 100).toFixed(2);
+  const noPrice  = ((100 - market.yesProb) / 100).toFixed(2);
+  const urgency  = market.daysLeft <= 3 ? "#c97070" : market.daysLeft <= 14 ? "#c49a00" : "#b8aeae";
+  const hasAgentPos = market.agentYesUsdt || market.agentNoUsdt;
+
   return (
-    <div onClick={onClick} style={{ background: "#fff", border: "1px solid #ede8e8", borderRadius: 16, padding: "20px 22px", cursor: "pointer", transition: "transform .15s ease, box-shadow .15s ease", position: "relative", overflow: "hidden" }}
-      onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.transform = "translateY(-2px)"; (e.currentTarget as HTMLDivElement).style.boxShadow = "0 8px 24px rgba(0,0,0,0.06)"; }}
+    <div
+      onClick={onClick}
+      style={{ background: "#fff", border: "1px solid #ede8e8", borderRadius: 16, padding: "20px 22px", cursor: "pointer", transition: "transform .15s ease, box-shadow .15s ease", position: "relative", overflow: "hidden", display: "flex", flexDirection: "column", gap: 0 }}
+      onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.transform = "translateY(-2px)"; (e.currentTarget as HTMLDivElement).style.boxShadow = "0 8px 24px rgba(0,0,0,0.07)"; }}
       onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.transform = ""; (e.currentTarget as HTMLDivElement).style.boxShadow = ""; }}
     >
-      {market.hot && (
-        <div style={{ position: "absolute", top: 14, right: 14, background: "#fdf0f0", border: "1px solid #f5d0d0", borderRadius: 99, padding: "2px 8px", fontSize: 10, color: "#c97070", fontWeight: 500 }}>Trending</div>
-      )}
-      <div style={{ display: "flex", alignItems: "flex-start", gap: 10, marginBottom: 14 }}>
-        <span style={{ background: cat.bg, border: `1px solid ${cat.border}`, borderRadius: 99, padding: "3px 10px", fontSize: 11, color: cat.text, fontWeight: 500, flexShrink: 0 }}>{market.category}</span>
+      {/* Top row: category + badges */}
+      <div style={{ display: "flex", alignItems: "center", gap: 6, marginBottom: 12 }}>
+        <span style={{ background: cat.bg, border: `1px solid ${cat.border}`, borderRadius: 99, padding: "2px 9px", fontSize: 10, color: cat.text, fontWeight: 600 }}>{market.category}</span>
+        {market.hot && <span style={{ background: "#fdf0f0", border: "1px solid #f5d0d0", borderRadius: 99, padding: "2px 8px", fontSize: 10, color: "#c97070", fontWeight: 500 }}>🔥 Hot</span>}
+        {hasAgentPos && (
+          <span style={{ background: "#f3f0fb", border: "1px solid #ddd5f5", borderRadius: 99, padding: "2px 8px", fontSize: 10, color: "#7b62c9", fontWeight: 600, marginLeft: "auto" }}>
+            Agent {market.agentYesUsdt ? `YES $${market.agentYesUsdt}` : `NO $${market.agentNoUsdt}`}
+          </span>
+        )}
+        {!hasAgentPos && market.daysLeft > 0 && (
+          <span style={{ fontSize: 10, color: urgency, fontWeight: 500, marginLeft: "auto" }}>
+            {market.daysLeft <= 1 ? "Closes today" : `${market.daysLeft}d left`}
+          </span>
+        )}
       </div>
-      <p style={{ fontSize: 14, fontWeight: 500, color: "#2a2020", lineHeight: 1.45, marginBottom: 16, fontFamily: "'DM Serif Display', Georgia, serif" }}>{market.title}</p>
-      <ProbBar yes={market.yesProb} />
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginTop: 14 }}>
-        <div style={{ display: "flex", gap: 16 }}>
-          <span style={{ fontSize: 11, color: "#b8aeae" }}>Vol {market.volume}</span>
-          <span style={{ fontSize: 11, color: "#b8aeae" }}>Closes {market.closes}</span>
+
+      {/* Question */}
+      <p style={{ fontSize: 14, fontWeight: 500, color: "#2a2020", lineHeight: 1.45, marginBottom: 16, fontFamily: "'DM Serif Display', Georgia, serif", flex: 1 }}>
+        {market.title}
+      </p>
+
+      {/* Big probability number */}
+      <div style={{ display: "flex", alignItems: "flex-end", gap: 8, marginBottom: 12 }}>
+        <span style={{ fontSize: 40, fontWeight: 700, fontFamily: "'DM Serif Display', Georgia, serif", color: market.yesProb >= 50 ? "#5f9a5f" : "#c97070", lineHeight: 1 }}>
+          {market.yesProb}%
+        </span>
+        <span style={{ fontSize: 12, color: "#b8aeae", marginBottom: 6 }}>chance YES</span>
+        <div style={{ marginLeft: "auto" }}>
+          <Spark data={market.trend} color={trendUp ? "#9ec89e" : "#e8a8a8"} />
         </div>
-        <Spark data={market.trend} color={trendUp ? "#9ec89e" : "#e8a8a8"} />
+      </div>
+
+      {/* Probability bar */}
+      <div style={{ height: 5, borderRadius: 99, overflow: "hidden", display: "flex", marginBottom: 14, gap: 2 }}>
+        <div style={{ width: `${market.yesProb}%`, background: "#9ec89e", transition: "width .4s ease" }} />
+        <div style={{ flex: 1, background: "#e8a8a8" }} />
+      </div>
+
+      {/* YES / NO price buttons */}
+      <div style={{ display: "flex", gap: 8, marginBottom: 14 }}>
+        <div style={{ flex: 1, background: "#f0f5f0", border: "1px solid #cde0cd", borderRadius: 10, padding: "8px 0", textAlign: "center" }}>
+          <div style={{ fontSize: 10, color: "#5f9a5f", fontWeight: 600, marginBottom: 2 }}>YES</div>
+          <div style={{ fontSize: 16, fontWeight: 700, color: "#5f9a5f" }}>${yesPrice}</div>
+        </div>
+        <div style={{ flex: 1, background: "#fdf0f0", border: "1px solid #f5d0d0", borderRadius: 10, padding: "8px 0", textAlign: "center" }}>
+          <div style={{ fontSize: 10, color: "#c97070", fontWeight: 600, marginBottom: 2 }}>NO</div>
+          <div style={{ fontSize: 16, fontWeight: 700, color: "#c97070" }}>${noPrice}</div>
+        </div>
+      </div>
+
+      {/* Footer: volume + closes */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <span style={{ fontSize: 11, color: "#b8aeae" }}>Vol {market.volume}</span>
+        <span style={{ fontSize: 11, color: "#b8aeae" }}>Closes {market.closes}</span>
       </div>
     </div>
   );
