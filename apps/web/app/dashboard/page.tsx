@@ -452,36 +452,69 @@ export default function PredictionMarketsPage() {
           <div style={{ display: "grid", gridTemplateColumns: "1fr 300px", gap: 24, alignItems: "start" }}>
             <div>
               {/* KPI strip */}
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(3, 1fr)", gap: 12, marginBottom: 24 }}>
+              <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 10, marginBottom: 24 }}>
                 {[
-                  { label: "Live markets", value: String(markets.length), sub: liveMarkets.length > 0 ? "on-chain" : "mock data", accent: "#b9a8e8", bg: "#f3f0fb", border: "#ddd5f5" },
-                  { label: "Total volume", value: liveMarkets.length > 0 ? `$${liveMarkets.reduce((s, m) => s + Number(m.volumeUsdt), 0).toLocaleString("en-US", { maximumFractionDigits: 0 })}` : "$13.7M", sub: "USDT deposited", accent: "#9ec89e", bg: "#f0f5f0", border: "#cde0cd" },
+                  { label: "Markets",     value: String(markets.length),    sub: liveMarkets.length > 0 ? "on-chain" : "demo", accent: "#b9a8e8", bg: "#f3f0fb", border: "#ddd5f5" },
+                  { label: "Volume",      value: liveMarkets.length > 0 ? `$${(liveMarkets.reduce((s, m) => s + Number(m.volumeUsdt), 0) / 1000).toFixed(0)}K` : "$13.7M", sub: "USD₮ deposited", accent: "#9ec89e", bg: "#f0f5f0", border: "#cde0cd" },
                   { label: "Resolutions", value: String(resolutions.filter(r => r.proposed).length), sub: `${resolutions.filter(r => r.finalized).length} finalized`, accent: "#e8a8a8", bg: "#fdf0f0", border: "#f5d0d0" },
+                  { label: "Win rate",    value: winRate !== null ? `${winRate}%` : "—",   sub: "resolved markets",  accent: "#c49a00", bg: "#fffbf0", border: "#f0e0a0" },
+                  { label: "P&L",         value: portfolioPnl ? `${portfolioPnl.positive ? "+" : ""}${portfolioPnl.pct}%` : "—", sub: "portfolio change", accent: portfolioPnl?.positive ? "#9ec89e" : "#e8a8a8", bg: portfolioPnl?.positive ? "#f0f5f0" : "#fdf0f0", border: portfolioPnl?.positive ? "#cde0cd" : "#f5d0d0" },
                 ].map((k, i) => (
-                  <div key={i} style={{ background: k.bg, border: `1px solid ${k.border}`, borderRadius: 14, padding: "16px 18px", animation: `fadeUp .3s ease ${i * .06}s both` }}>
-                    <p style={{ fontSize: 11, color: k.accent, fontWeight: 500, marginBottom: 6, letterSpacing: ".02em" }}>{k.label.toUpperCase()}</p>
-                    <p style={{ fontSize: 26, fontWeight: 400, fontFamily: "'DM Serif Display', Georgia, serif", color: "#2a2020", letterSpacing: "-.5px", lineHeight: 1 }}>{k.value}</p>
-                    <p style={{ fontSize: 11, color: "#c4b8b8", marginTop: 5 }}>{k.sub}</p>
+                  <div key={i} style={{ background: k.bg, border: `1px solid ${k.border}`, borderRadius: 14, padding: "14px 16px", animation: `fadeUp .3s ease ${i * .05}s both` }}>
+                    <p style={{ fontSize: 10, color: k.accent, fontWeight: 600, marginBottom: 6, letterSpacing: ".04em" }}>{k.label.toUpperCase()}</p>
+                    <p style={{ fontSize: 22, fontWeight: 400, fontFamily: "'DM Serif Display', Georgia, serif", color: "#2a2020", letterSpacing: "-.5px", lineHeight: 1 }}>{k.value}</p>
+                    <p style={{ fontSize: 10, color: "#c4b8b8", marginTop: 4 }}>{k.sub}</p>
                   </div>
                 ))}
               </div>
 
-              {/* Filter pills */}
-              <div style={{ display: "flex", gap: 6, marginBottom: 20, flexWrap: "wrap" }}>
-                {categories.map(c => (
-                  <button key={c} className={`filter-pill ${filter === c ? "active" : ""}`} onClick={() => setFilter(c)}>{c}</button>
-                ))}
+              {/* Search + sort + filter row */}
+              <div style={{ display: "flex", gap: 10, marginBottom: 16, alignItems: "center", flexWrap: "wrap" }}>
+                <div style={{ position: "relative", flex: 1, minWidth: 180 }}>
+                  <span style={{ position: "absolute", left: 12, top: "50%", transform: "translateY(-50%)", color: "#c4b8b8", fontSize: 13 }}>🔍</span>
+                  <input
+                    type="text"
+                    placeholder="Search markets…"
+                    value={search}
+                    onChange={e => setSearch(e.target.value)}
+                    style={{ width: "100%", paddingLeft: 34, paddingRight: 12, paddingTop: 9, paddingBottom: 9, border: "1px solid #ede8e8", borderRadius: 10, fontSize: 13, color: "#2a2020", background: "#fff", outline: "none", boxSizing: "border-box" }}
+                  />
+                </div>
+                <div style={{ display: "flex", gap: 4, background: "#fdf9f7", border: "1px solid #ede8e8", borderRadius: 10, padding: 4 }}>
+                  {(["trending", "volume", "closes", "probability"] as const).map(s => (
+                    <button
+                      key={s}
+                      onClick={() => setSortBy(s)}
+                      style={{ padding: "5px 10px", borderRadius: 7, border: "none", cursor: "pointer", fontSize: 11, fontWeight: 500, background: sortBy === s ? "#fff" : "transparent", color: sortBy === s ? "#2a2020" : "#b8aeae", boxShadow: sortBy === s ? "0 1px 4px rgba(0,0,0,0.08)" : "none", transition: "all .15s ease" }}
+                    >
+                      {s === "closes" ? "Closing soon" : s.charAt(0).toUpperCase() + s.slice(1)}
+                    </button>
+                  ))}
+                </div>
+                <div style={{ display: "flex", gap: 5, flexWrap: "wrap" }}>
+                  {categories.map(c => (
+                    <button key={c} className={`filter-pill ${filter === c ? "active" : ""}`} onClick={() => setFilter(c)}>{c}</button>
+                  ))}
+                </div>
               </div>
 
               {/* Market grid */}
-              <div className="card-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12 }}>
-                {filtered.map(m => (
-                  <MarketCard key={String(m.id)} market={m} onClick={() => setSelected(selected?.id === m.id ? null : m)} />
-                ))}
-              </div>
+              {filtered.length === 0 ? (
+                <div style={{ textAlign: "center", padding: "48px 0", color: "#c4b8b8" }}>
+                  <p style={{ fontSize: 32, marginBottom: 12 }}>🔍</p>
+                  <p style={{ fontSize: 14, fontWeight: 500, color: "#9a8e8e" }}>No markets match &ldquo;{search}&rdquo;</p>
+                  <p style={{ fontSize: 12, marginTop: 6 }}>Try a different search or clear the filter</p>
+                </div>
+              ) : (
+                <div className="card-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+                  {filtered.map(m => (
+                    <MarketCard key={String(m.id)} market={m} onClick={() => setSelected(selected?.id === m.id ? null : m)} />
+                  ))}
+                </div>
+              )}
 
-              {liveMarkets.length === 0 && (
-                <p style={{ fontSize: 12, color: "#c4b8b8", marginTop: 12, textAlign: "center" }}>Showing mock markets — start the agent to load live on-chain markets</p>
+              {liveMarkets.length === 0 && filtered.length > 0 && (
+                <p style={{ fontSize: 12, color: "#c4b8b8", marginTop: 12, textAlign: "center" }}>Showing demo markets — start the agent to load live on-chain markets</p>
               )}
             </div>
 
