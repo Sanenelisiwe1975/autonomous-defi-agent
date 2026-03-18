@@ -171,6 +171,21 @@ function Spark({ data, color }: { data: number[]; color: string }) {
   );
 }
 
+function ProbBar({ yes }: { yes: number }) {
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+      <div style={{ height: 5, borderRadius: 99, overflow: "hidden", display: "flex", gap: 2 }}>
+        <div style={{ width: `${yes}%`, background: "#9ec89e", transition: "width .4s ease" }} />
+        <div style={{ flex: 1, background: "#e8a8a8" }} />
+      </div>
+      <div style={{ display: "flex", justifyContent: "space-between" }}>
+        <span style={{ fontSize: 12, color: "#5f9a5f", fontWeight: 600 }}>YES {yes}%</span>
+        <span style={{ fontSize: 12, color: "#c97070", fontWeight: 600 }}>NO {100 - yes}%</span>
+      </div>
+    </div>
+  );
+}
+
 function MarketCard({ market, onClick }: { market: Market; onClick: () => void }) {
   const cat      = CATEGORY_COLOR[market.category] ?? { bg: "#f5f5f5", text: "#888888", border: "#e0e0e0" };
   const trendUp  = (market.trend[market.trend.length - 1] ?? 0) >= (market.trend[0] ?? 0);
