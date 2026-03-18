@@ -26,31 +26,39 @@ const ACTION_CONFIG: Record<string, { color: string; glyph: string }> = {
 
 function TxHash({ hash }: { hash: string }) {
   const [copied, setCopied] = useState(false);
+  const explorerUrl = `https://sepolia.etherscan.io/tx/${hash}`;
 
-  const copy = () => {
+  const copy = (e: React.MouseEvent) => {
+    e.preventDefault();
     void navigator.clipboard.writeText(hash);
     setCopied(true);
     setTimeout(() => setCopied(false), 1500);
   };
 
   return (
-    <span
-      onClick={copy}
-      title={hash}
-      style={{
-        display: "inline-flex",
-        alignItems: "center",
-        gap: 5,
-        cursor: "pointer",
-        fontFamily: "'IBM Plex Mono', 'Courier New', monospace",
-        fontSize: 11,
-        color: copied ? "#00e676" : "#40c4ff",
-        letterSpacing: "0.04em",
-        transition: "color 0.2s",
-      }}
-    >
-      {copied ? "COPIED" : `${hash.slice(0, 8)}…${hash.slice(-5)}`}
-      <span style={{ fontSize: 8, opacity: 0.4 }}>⧉</span>
+    <span style={{ display: "inline-flex", alignItems: "center", gap: 6 }}>
+      <a
+        href={explorerUrl}
+        target="_blank"
+        rel="noopener noreferrer"
+        title={hash}
+        style={{
+          fontFamily: "'IBM Plex Mono', 'Courier New', monospace",
+          fontSize: 11,
+          color: "#40c4ff",
+          letterSpacing: "0.04em",
+          textDecoration: "none",
+        }}
+      >
+        {`${hash.slice(0, 8)}…${hash.slice(-5)}`}
+      </a>
+      <span
+        onClick={copy}
+        title="Copy full hash"
+        style={{ cursor: "pointer", fontSize: 9, opacity: 0.4, color: copied ? "#00e676" : "#9e9e9e" }}
+      >
+        {copied ? "✓" : "⧉"}
+      </span>
     </span>
   );
 }
