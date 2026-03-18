@@ -58,8 +58,24 @@ interface Resolution {
   source: string;
   resolvedBy: string;
   finalized: boolean;
+  rationale: string | null;
   proposedAt: string | null;
   disputeWindowEnds: string | null;
+}
+
+interface SubscriptionPlan {
+  id: number;
+  name: string;
+  priceUsdt: string;
+  periodDays: number;
+  active: boolean;
+}
+
+interface SubscriptionState {
+  contractAddress: string;
+  activeSubscribers: number;
+  totalRevenue: string;
+  plans: SubscriptionPlan[];
 }
 
 interface PortfolioSnapshot {
@@ -236,18 +252,21 @@ export default function PredictionMarketsPage() {
   const [snapshots, setSnapshots]             = useState<PortfolioSnapshot[]>([]);
   const [trades, setTrades]                   = useState<Trade[]>([]);
   const [conditionalPayments, setConditionalPayments] = useState<ConditionalPayment[]>([]);
+  const [subscriptionState, setSubscriptionState]     = useState<SubscriptionState | null>(null);
 
-  const fetchAgent       = useCallback(() => fetch("/api/agent").then(r => r.json()).then(setAgentState).catch(() => {}), []);
-  const fetchMarkets     = useCallback(() => fetch("/api/markets").then(r => r.json()).then((d: { markets: LiveMarket[] }) => setLiveMarkets(d.markets ?? [])).catch(() => {}), []);
-  const fetchVault       = useCallback(() => fetch("/api/vault").then(r => r.json()).then((d: VaultState & { error?: string }) => { if (!d.error) setVaultState(d); }).catch(() => {}), []);
-  const fetchRes         = useCallback(() => fetch("/api/resolutions").then(r => r.json()).then((d: { resolutions: Resolution[] }) => setResolutions(d.resolutions ?? [])).catch(() => {}), []);
-  const fetchPortfolio   = useCallback(() => fetch("/api/portfolio").then(r => r.json()).then((d: { snapshots: PortfolioSnapshot[] }) => setSnapshots(d.snapshots ?? [])).catch(() => {}), []);
-  const fetchTrades      = useCallback(() => fetch("/api/trades").then(r => r.json()).then((d: { trades: Trade[] }) => setTrades(d.trades ?? [])).catch(() => {}), []);
-  const fetchConditional = useCallback(() => fetch("/api/conditional").then(r => r.json()).then((d: { payments: ConditionalPayment[] }) => setConditionalPayments(d.payments ?? [])).catch(() => {}), []);
+  const fetchAgent        = useCallback(() => fetch("/api/agent").then(r => r.json()).then(setAgentState).catch(() => {}), []);
+  const fetchMarkets      = useCallback(() => fetch("/api/markets").then(r => r.json()).then((d: { markets: LiveMarket[] }) => setLiveMarkets(d.markets ?? [])).catch(() => {}), []);
+  const fetchVault        = useCallback(() => fetch("/api/vault").then(r => r.json()).then((d: VaultState & { error?: string }) => { if (!d.error) setVaultState(d); }).catch(() => {}), []);
+  const fetchRes          = useCallback(() => fetch("/api/resolutions").then(r => r.json()).then((d: { resolutions: Resolution[] }) => setResolutions(d.resolutions ?? [])).catch(() => {}), []);
+  const fetchPortfolio    = useCallback(() => fetch("/api/portfolio").then(r => r.json()).then((d: { snapshots: PortfolioSnapshot[] }) => setSnapshots(d.snapshots ?? [])).catch(() => {}), []);
+  const fetchTrades       = useCallback(() => fetch("/api/trades").then(r => r.json()).then((d: { trades: Trade[] }) => setTrades(d.trades ?? [])).catch(() => {}), []);
+  const fetchConditional  = useCallback(() => fetch("/api/conditional").then(r => r.json()).then((d: { payments: ConditionalPayment[] }) => setConditionalPayments(d.payments ?? [])).catch(() => {}), []);
+  const fetchSubscription = useCallback(() => fetch("/api/subscription").then(r => r.json()).then((d: SubscriptionState & { error?: string }) => { if (!d.error) setSubscriptionState(d); }).catch(() => {}), []);
 
   useEffect(() => {
     void fetchAgent(); void fetchMarkets(); void fetchVault();
-    void fetchRes();   void fetchPortfolio(); void fetchTrades(); void fetchConditional();
+    void fetchRes();   void fetchPortfolio(); void fetchTrades();
+    void fetchConditional(); void fetchSubscription();
 
     const agentInterval     = setInterval(() => { void fetchAgent(); void fetchTrades(); }, 10_000);
     const marketInterval    = setInterval(() => { void fetchMarkets(); void fetchRes(); void fetchConditional(); }, 30_000);
