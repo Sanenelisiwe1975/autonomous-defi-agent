@@ -235,21 +235,23 @@ export default function PredictionMarketsPage() {
   const [resolutions, setResolutions]         = useState<Resolution[]>([]);
   const [snapshots, setSnapshots]             = useState<PortfolioSnapshot[]>([]);
   const [trades, setTrades]                   = useState<Trade[]>([]);
+  const [conditionalPayments, setConditionalPayments] = useState<ConditionalPayment[]>([]);
 
-  const fetchAgent    = useCallback(() => fetch("/api/agent").then(r => r.json()).then(setAgentState).catch(() => {}), []);
-  const fetchMarkets  = useCallback(() => fetch("/api/markets").then(r => r.json()).then((d: { markets: LiveMarket[] }) => setLiveMarkets(d.markets ?? [])).catch(() => {}), []);
-  const fetchVault    = useCallback(() => fetch("/api/vault").then(r => r.json()).then((d: VaultState & { error?: string }) => { if (!d.error) setVaultState(d); }).catch(() => {}), []);
-  const fetchRes      = useCallback(() => fetch("/api/resolutions").then(r => r.json()).then((d: { resolutions: Resolution[] }) => setResolutions(d.resolutions ?? [])).catch(() => {}), []);
-  const fetchPortfolio= useCallback(() => fetch("/api/portfolio").then(r => r.json()).then((d: { snapshots: PortfolioSnapshot[] }) => setSnapshots(d.snapshots ?? [])).catch(() => {}), []);
-  const fetchTrades   = useCallback(() => fetch("/api/trades").then(r => r.json()).then((d: { trades: Trade[] }) => setTrades(d.trades ?? [])).catch(() => {}), []);
+  const fetchAgent       = useCallback(() => fetch("/api/agent").then(r => r.json()).then(setAgentState).catch(() => {}), []);
+  const fetchMarkets     = useCallback(() => fetch("/api/markets").then(r => r.json()).then((d: { markets: LiveMarket[] }) => setLiveMarkets(d.markets ?? [])).catch(() => {}), []);
+  const fetchVault       = useCallback(() => fetch("/api/vault").then(r => r.json()).then((d: VaultState & { error?: string }) => { if (!d.error) setVaultState(d); }).catch(() => {}), []);
+  const fetchRes         = useCallback(() => fetch("/api/resolutions").then(r => r.json()).then((d: { resolutions: Resolution[] }) => setResolutions(d.resolutions ?? [])).catch(() => {}), []);
+  const fetchPortfolio   = useCallback(() => fetch("/api/portfolio").then(r => r.json()).then((d: { snapshots: PortfolioSnapshot[] }) => setSnapshots(d.snapshots ?? [])).catch(() => {}), []);
+  const fetchTrades      = useCallback(() => fetch("/api/trades").then(r => r.json()).then((d: { trades: Trade[] }) => setTrades(d.trades ?? [])).catch(() => {}), []);
+  const fetchConditional = useCallback(() => fetch("/api/conditional").then(r => r.json()).then((d: { payments: ConditionalPayment[] }) => setConditionalPayments(d.payments ?? [])).catch(() => {}), []);
 
   useEffect(() => {
     void fetchAgent(); void fetchMarkets(); void fetchVault();
-    void fetchRes();   void fetchPortfolio(); void fetchTrades();
+    void fetchRes();   void fetchPortfolio(); void fetchTrades(); void fetchConditional();
 
-    const agentInterval   = setInterval(() => { void fetchAgent(); void fetchTrades(); }, 10_000);
-    const marketInterval  = setInterval(() => { void fetchMarkets(); void fetchRes(); }, 30_000);
-    const vaultInterval   = setInterval(fetchVault, 30_000);
+    const agentInterval     = setInterval(() => { void fetchAgent(); void fetchTrades(); }, 10_000);
+    const marketInterval    = setInterval(() => { void fetchMarkets(); void fetchRes(); void fetchConditional(); }, 30_000);
+    const vaultInterval     = setInterval(fetchVault, 30_000);
     const portfolioInterval = setInterval(fetchPortfolio, 15_000);
 
     return () => {
@@ -332,6 +334,11 @@ export default function PredictionMarketsPage() {
           </div>
           {(agentState?.lastCycleMs ?? 0) > 0 && (
             <span style={{ fontSize: 11, color: "#c4b8b8" }}>{((agentState?.lastCycleMs ?? 0) / 1000).toFixed(1)}s/cycle</span>
+          )}
+          {agentState?.gasGwei && (
+            <span style={{ fontSize: 11, color: "#c4b8b8", padding: "4px 10px", background: "#fdf9f7", border: "1px solid #ede8e8", borderRadius: 99 }}>
+              ⛽ {agentState.gasGwei} gwei
+            </span>
           )}
         </div>
       </header>
