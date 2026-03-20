@@ -364,14 +364,15 @@ export default function PredictionMarketsPage() {
   const fetchAgent        = useCallback(() => fetch("/api/agent").then(r => r.json()).then(setAgentState).catch(() => {}), []);
   const fetchMarkets      = useCallback(() => fetch("/api/markets").then(r => r.json()).then((d: { markets: LiveMarket[] }) => {
     const incoming = d.markets ?? [];
-    if (incoming. length > 0) {
+    if (incoming.length > 0) {
+      setLiveMarkets(incoming);
       setFilter(prev => {
-        if(prev == "All") return prev;
+        if (prev === "All") return prev;
         const cats = new Set(incoming.map(m => deriveCategory(m.question)));
         return cats.has(prev) ? prev : "All";
-      })
+      });
     }
-  }).catch(()=>{}), []);   
+  }).catch(() => {}), []);
   const fetchVault        = useCallback(() => fetch("/api/vault").then(r => r.json()).then((d: VaultState & { error?: string }) => { if (!d.error) setVaultState(d); }).catch(() => {}), []);
   const fetchRes          = useCallback(() => fetch("/api/resolutions").then(r => r.json()).then((d: { resolutions: Resolution[] }) => setResolutions(d.resolutions ?? [])).catch(() => {}), []);
   const fetchPortfolio    = useCallback(() => fetch("/api/portfolio").then(r => r.json()).then((d: { snapshots: PortfolioSnapshot[] }) => setSnapshots(d.snapshots ?? [])).catch(() => {}), []);
