@@ -63,6 +63,20 @@ export const HoldActionSchema = BaseActionSchema.extend({
   reason: z.string(),
 });
 
+export const CreateMarketActionSchema = BaseActionSchema.extend({
+  type: z.literal("CREATE_MARKET"),
+  /** The binary question the market will resolve (e.g. "Will ETH be above $3,000 by June 30 2026?"). */
+  question: z.string().min(10).max(200),
+  /** Unix timestamp for market close (seconds). Must be at least 1 day from now. */
+  closingTimestamp: z.number().int().positive(),
+  /** Seed liquidity for YES side in micro-USDT. Use equal amounts for 50/50 start. */
+  seedYesMicroUsdt: z.bigint(),
+  /** Seed liquidity for NO side in micro-USDT. */
+  seedNoMicroUsdt: z.bigint(),
+  /** Why this market is worth creating now (what event or opportunity prompted it). */
+  marketRationale: z.string(),
+});
+
 export const BridgeUsdt0ActionSchema = BaseActionSchema.extend({
   type: z.literal("BRIDGE_USDT0"),
   /** Destination chain for the USDT0 LayerZero OFT bridge. */
@@ -79,6 +93,7 @@ export const ActionSchema = z.discriminatedUnion("type", [
   RebalanceActionSchema,
   HoldActionSchema,
   BridgeUsdt0ActionSchema,
+  CreateMarketActionSchema,
 ]);
 
 export type EnterMarketAction = z.infer<typeof EnterMarketActionSchema>;
@@ -86,6 +101,7 @@ export type ExitMarketAction = z.infer<typeof ExitMarketActionSchema>;
 export type RebalanceAction = z.infer<typeof RebalanceActionSchema>;
 export type HoldAction = z.infer<typeof HoldActionSchema>;
 export type BridgeUsdt0Action = z.infer<typeof BridgeUsdt0ActionSchema>;
+export type CreateMarketAction = z.infer<typeof CreateMarketActionSchema>;
 export type AgentAction = z.infer<typeof ActionSchema>;
 
 
