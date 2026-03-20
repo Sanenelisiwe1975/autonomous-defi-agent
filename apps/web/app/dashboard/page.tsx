@@ -615,7 +615,7 @@ export default function PredictionMarketsPage() {
 
               {liveMarkets.length === 0 && (
                 <div style={{ background: "#fffbf0", border: "1px solid #f0e0a0", borderRadius: 10, padding: "9px 14px", marginBottom: 14, fontSize: 12, color: "#c49a00" }}>
-                  Showing demo markets — agent is not yet returning live data
+                  Agent offline — showing demo markets. The agent runs as a server process; contact the operator to start it.
                 </div>
               )}
 
@@ -666,7 +666,7 @@ export default function PredictionMarketsPage() {
               )}
 
               {liveMarkets.length === 0 && filtered.length > 0 && (
-                <p style={{ fontSize: 12, color: "#c4b8b8", marginTop: 12, textAlign: "center" }}>Showing demo markets — start the agent to load live on-chain markets</p>
+                <p style={{ fontSize: 12, color: "#c4b8b8", marginTop: 12, textAlign: "center" }}>Agent offline — live markets will appear automatically once the agent server process is running.</p>
               )}
             </div>
 
