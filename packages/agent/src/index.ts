@@ -114,6 +114,31 @@ async function runCycle(
 }
 
 
+const LOCK_KEY = "agent:lock";
+const LOCK_TTL_SEC = 90;
+
+async function acquireLock(): Promise<(() => Promise<void>) | null> {
+  const redisUrl = process.env["REDIS_URL"];
+  if (!redisUrl) return () => Promise.resolve();
+  try {
+    const { createClient } = await import("redis" as string) as { createClient: typeof import("redis")["createClient"] };
+    const client = createClient({ url: redisUrl });
+    await client.connect();
+    const acquired = await client.set(LOCK_KEY, process.pid.toString(), { NX: true, EX: LOCK_TTL_SEC });
+    if (!acquired) {
+      await client.disconnect();
+      return null;
+    }
+    const release = async () => {
+      await client.del(LOCK_KEY);
+      await client.disconnect();
+    };
+    return release;
+  } catch {
+    return () => Promise.resolve();
+  }
+}
+
 async function main(): Promise<void> {
   const config = resolveConfig();
 
@@ -126,6 +151,12 @@ async function main(): Promise<void> {
   console.log(`Dry run:        ${config.dryRun}`);
   console.log(`Max iterations: ${config.maxIterations ?? "∞"}`);
 
+  const releaseLock = await acquireLock();
+  if (!releaseLock) {
+    console.error("[AGENT] Another instance is already running (Redis lock held). Exiting.");
+    process.exit(1);
+  }
+
   const wallet = createAgentWallet();
   const address = await wallet.getAddress(0);
   console.log(`Agent address:  ${address}`);
@@ -133,9 +164,10 @@ async function main(): Promise<void> {
 
   let iteration = 0;
 
-  const shutdown = () => {
+  const shutdown = async () => {
     console.log("\n[AGENT] Shutting down — disposing wallet keys…");
     wallet.dispose();
+    await releaseLock();
     process.exit(0);
   };
 
