@@ -36,6 +36,8 @@ export interface ObserveResult {
   opportunities: RawOpportunity[];
   /** True if any risk gates are triggered (e.g. USDT depeg, network congested). */
   riskGatesTriggered: string[];
+  /** Market addresses where the agent already holds a YES or NO position. */
+  openPositionMarketIds: Set<string>;
   observedAt: string;
 }
 
