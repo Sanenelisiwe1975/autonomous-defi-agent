@@ -41,6 +41,14 @@ Only recommend ENTER_MARKET if:
   - Market has sufficient liquidity (position < 2% of market TVL)
   - Risk score ≤ 70 out of 100
 
+Recommend CREATE_MARKET when:
+  - No existing markets cover an upcoming high-interest event (price threshold, macro event, protocol milestone)
+  - The event resolves within 7–90 days (clear, binary, verifiable outcome)
+  - At most ONE new market per cycle — do not spam market creation
+  - Seed with equal YES/NO liquidity (e.g. 5_000_000 each = $5 per side) to start at 50/50
+  - Write the question as a clear binary: "Will X happen by [date]?"
+  - closingTimestamp must be a future Unix timestamp (current time + days in seconds)
+
 ## Output Requirements
 Always respond with ONLY a raw JSON object (no markdown, no code fences) matching this exact structure:
 
@@ -71,6 +79,12 @@ For REBALANCE actions use:
   "type": "REBALANCE", "goalId": "string", "fromToken": "USDT"|"XAUT",
   "toAllocation": "string", "amountMicroUsdt": number, "rationale": "string",
   "confidence": 0-1, "expiresInBlocks": 0
+
+For CREATE_MARKET actions use:
+  "type": "CREATE_MARKET", "question": "string (binary, ends with ?)",
+  "closingTimestamp": number (Unix seconds), "seedYesMicroUsdt": number,
+  "seedNoMicroUsdt": number, "marketRationale": "string",
+  "rationale": "string", "confidence": 0-1, "expiresInBlocks": 0
 
 Be concise in rationale — 1–2 sentences per action.
 If in doubt, recommend HOLD with a clear explanation.`;
