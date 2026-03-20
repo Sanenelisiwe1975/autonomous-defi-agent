@@ -146,9 +146,18 @@ export class OpenClawPlanner {
         p.actions = p.actions.map((a) => ({
           ...a,
           id: typeof a["id"] === "string" ? a["id"] : generateActionId(),
-          amountMicroUsdt: a["amountMicroUsdt"]
-            ? BigInt(a["amountMicroUsdt"] as string | number)
-            : 10_000_000n,
+          ...(a["amountMicroUsdt"] !== undefined && {
+            amountMicroUsdt: BigInt(a["amountMicroUsdt"] as string | number),
+          }),
+          ...(a["seedYesMicroUsdt"] !== undefined && {
+            seedYesMicroUsdt: BigInt(a["seedYesMicroUsdt"] as string | number),
+          }),
+          ...(a["seedNoMicroUsdt"] !== undefined && {
+            seedNoMicroUsdt: BigInt(a["seedNoMicroUsdt"] as string | number),
+          }),
+          ...(a["amountTokens"] !== undefined && {
+            amountTokens: BigInt(a["amountTokens"] as string | number),
+          }),
         }));
         p.generatedAt = new Date().toISOString();
       }
