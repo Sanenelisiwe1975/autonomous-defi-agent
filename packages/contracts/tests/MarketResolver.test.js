@@ -4,7 +4,6 @@ const { ethers } = require("hardhat");
 const { time }   = require("@nomicfoundation/hardhat-network-helpers");
 const { USDT_UNIT, DAY, DISPUTE_BOND } = require("./helpers");
 
-// OutcomeIndex enum: INVALID=0, YES=1, NO=2
 const Outcome = { INVALID: 0n, YES: 1n, NO: 2n };
 const DISPUTE_PERIOD = 48n * 3_600n; // 48 hours in seconds
 
@@ -29,7 +28,6 @@ async function deployResolver() {
   const resolverAddr = await resolver.getAddress();
   await usdt.connect(challenger).approve(resolverAddr, ethers.MaxUint256);
 
-  // Deploy a mock PredictionMarket for resolve() calls
   const MockERC20b = await ethers.getContractFactory("MockERC20");
   const usdtB = await MockERC20b.deploy("Mock USDT B","USDTB",6);
   await usdtB.waitForDeployment();
@@ -64,7 +62,6 @@ async function deployResolver() {
 
 describe("MarketResolver", function () {
 
-  // ── Deployment ──────────────────────────────────────────────────────────────
   describe("Deployment", () => {
     it("stores owner, collateralToken, aiOracle", async () => {
       const { resolver, usdt, owner, aiOracle } = await deployResolver();
@@ -81,7 +78,6 @@ describe("MarketResolver", function () {
     });
   });
 
-  // ── registerMarket ───────────────────────────────────────────────────────────
   describe("registerMarket()", () => {
     it("owner registers a market", async () => {
       const { resolver, owner } = await deployResolver();
@@ -98,7 +94,6 @@ describe("MarketResolver", function () {
     });
   });
 
-  // ── proposeResolution ────────────────────────────────────────────────────────
   describe("proposeResolution()", () => {
     it("committee member proposes a resolution", async () => {
       const { resolver, committee, marketId } = await deployResolver();
@@ -129,7 +124,6 @@ describe("MarketResolver", function () {
     });
   });
 
-  // ── aiResolve ────────────────────────────────────────────────────────────────
   describe("aiResolve()", () => {
     it("aiOracle can propose resolution with rationale", async () => {
       const { resolver, aiOracle, marketId } = await deployResolver();
@@ -161,7 +155,6 @@ describe("MarketResolver", function () {
     });
   });
 
-  // ── finalizeResolution ───────────────────────────────────────────────────────
   describe("finalizeResolution()", () => {
     it("finalizes after AI_ORACLE 24h window and calls market.resolve()", async () => {
       const { resolver, aiOracle, market, marketId } = await deployResolver();
@@ -259,7 +252,6 @@ describe("MarketResolver", function () {
 
     it("committee reaches quorum — dispute UPHELD (outcome overridden)", async () => {
       const { resolver, committee, marketId } = await setupDispute();
-      // Vote NO (different from original YES) — upheld means dispute accepted, outcome flips
       await resolver.connect(committee[0]).voteOnDispute(marketId, Outcome.NO);
       await resolver.connect(committee[1]).voteOnDispute(marketId, Outcome.NO);
       await expect(resolver.connect(committee[2]).voteOnDispute(marketId, Outcome.NO))
@@ -296,7 +288,6 @@ describe("MarketResolver", function () {
     });
   });
 
-  // ── Admin ────────────────────────────────────────────────────────────────────
   describe("Admin", () => {
     it("owner sets new aiOracle", async () => {
       const { resolver, owner, alice } = await deployResolver();
