@@ -566,19 +566,19 @@ export default function PredictionMarketsPage() {
       `}</style>
 
       {/* ── Header ── */}
-      <header style={{ background: "#fff", borderBottom: "1px solid #ede8e8", padding: "0 32px", height: 60, display: "flex", alignItems: "center", justifyContent: "space-between", position: "sticky", top: 0, zIndex: 50 }}>
+      <header className="site-header">
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <div style={{ width: 30, height: 30, borderRadius: 9, background: "#f3f0fb", border: "1px solid #ddd5f5", display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <div style={{ width: 30, height: 30, borderRadius: 9, background: "#f3f0fb", border: "1px solid #ddd5f5", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
               <circle cx="7" cy="7" r="5.5" stroke="#b9a8e8" strokeWidth="1.5" />
               <polyline points="4,9 6,6 8,7.5 10,4" stroke="#b9a8e8" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
             </svg>
           </div>
-          <span style={{ fontFamily: "'DM Serif Display', Georgia, serif", fontSize: 17, color: "#2a2020", letterSpacing: "-.2px" }}>Autonomous DeFi Agent</span>
-          {agentState && <span style={{ fontSize: 11, color: "#c4b8b8" }}>#{agentState.iteration} · {agentState.network}</span>}
+          <span style={{ fontFamily: "'DM Serif Display', Georgia, serif", fontSize: 17, color: "#2a2020", letterSpacing: "-.2px", whiteSpace: "nowrap" }}>DeFi Agent</span>
+          {agentState && <span className="header-meta" style={{ fontSize: 11, color: "#c4b8b8" }}>#{agentState.iteration} · {agentState.network}</span>}
         </div>
 
-        <div style={{ display: "flex", alignItems: "center", gap: 6, background: "#fdf9f7", border: "1px solid #ede8e8", borderRadius: 99, padding: "4px 6px" }}>
+        <div className="header-tabs">
           {(["markets", "portfolio", "agent"] as const).map(t => (
             <button key={t} className={`tab-btn ${activeTab === t ? "active" : ""}`} onClick={() => setActiveTab(t)}>
               {t.charAt(0).toUpperCase() + t.slice(1)}
@@ -586,26 +586,28 @@ export default function PredictionMarketsPage() {
           ))}
         </div>
 
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 7, padding: "6px 12px", background: agentRunning ? "#f0f5f0" : "#fdf0f0", borderRadius: 99, border: `1px solid ${agentRunning ? "#cde0cd" : "#f5d0d0"}` }}>
+        <div className="header-right">
+          <div style={{ display: "flex", alignItems: "center", gap: 7, padding: "6px 12px", background: agentRunning ? "#f0f5f0" : "#fdf0f0", borderRadius: 99, border: `1px solid ${agentRunning ? "#cde0cd" : "#f5d0d0"}`, flexShrink: 0 }}>
             <span style={{ position: "relative", display: "inline-flex" }}>
               {agentRunning && <span style={{ position: "absolute", inset: 0, borderRadius: "50%", background: "#9ec89e", animation: "pulse-ring .9s ease-out infinite" }} />}
               <span style={{ width: 7, height: 7, borderRadius: "50%", background: agentRunning ? "#5f9a5f" : "#c97070", display: "block", position: "relative" }} />
             </span>
-            <span style={{ fontSize: 12, color: agentRunning ? "#5f9a5f" : "#c97070", fontWeight: 500 }}>
-              Agent {agentRunning ? "active" : "waiting"}
+            <span style={{ fontSize: 12, color: agentRunning ? "#5f9a5f" : "#c97070", fontWeight: 500, whiteSpace: "nowrap" }}>
+              {agentRunning ? "Active" : "Offline"}
             </span>
           </div>
-          {(agentState?.lastCycleMs ?? 0) > 0 && (
-            <span style={{ fontSize: 11, color: "#c4b8b8" }}>{((agentState?.lastCycleMs ?? 0) / 1000).toFixed(1)}s/cycle</span>
-          )}
-          {agentState?.gasGwei && (
-            <span style={{ fontSize: 11, color: "#c4b8b8", padding: "4px 10px", background: "#fdf9f7", border: "1px solid #ede8e8", borderRadius: 99 }}>
-              ⛽ {agentState.gasGwei} gwei
-            </span>
-          )}
+          <div className="header-meta" style={{ display: "flex", gap: 8, alignItems: "center" }}>
+            {(agentState?.lastCycleMs ?? 0) > 0 && (
+              <span style={{ fontSize: 11, color: "#c4b8b8" }}>{((agentState?.lastCycleMs ?? 0) / 1000).toFixed(1)}s/cycle</span>
+            )}
+            {agentState?.gasGwei && (
+              <span style={{ fontSize: 11, color: "#c4b8b8", padding: "4px 10px", background: "#fdf9f7", border: "1px solid #ede8e8", borderRadius: 99 }}>
+                ⛽ {agentState.gasGwei} gwei
+              </span>
+            )}
+          </div>
           {walletAddress ? (
-            <div style={{ display: "flex", alignItems: "center", gap: 7, padding: "6px 12px", background: "#f3f0fb", border: "1px solid #ddd5f5", borderRadius: 99 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 7, padding: "6px 12px", background: "#f3f0fb", border: "1px solid #ddd5f5", borderRadius: 99, flexShrink: 0 }}>
               <span style={{ width: 7, height: 7, borderRadius: "50%", background: "#7b62c9", display: "block" }} />
               <span style={{ fontSize: 11, color: "#7b62c9", fontWeight: 500 }}>
                 {walletAddress.slice(0, 6)}…{walletAddress.slice(-4)}
@@ -619,7 +621,7 @@ export default function PredictionMarketsPage() {
               type="button"
               onClick={connectWallet}
               disabled={connectingWallet}
-              style={{ padding: "6px 14px", borderRadius: 99, border: "1px solid #ddd5f5", background: "#f3f0fb", color: "#7b62c9", fontSize: 12, fontWeight: 500, cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}
+              style={{ padding: "6px 14px", borderRadius: 99, border: "1px solid #ddd5f5", background: "#f3f0fb", color: "#7b62c9", fontSize: 12, fontWeight: 500, cursor: "pointer", fontFamily: "'DM Sans', sans-serif", whiteSpace: "nowrap", flexShrink: 0 }}
             >
               {connectingWallet ? "Connecting…" : "Connect Wallet"}
             </button>
@@ -627,7 +629,7 @@ export default function PredictionMarketsPage() {
         </div>
       </header>
 
-      <main style={{ padding: "28px 32px", maxWidth: 1200, margin: "0 auto" }}>
+      <main className="site-main">
 
         {/* ── Markets Tab ── */}
         {activeTab === "markets" && (
