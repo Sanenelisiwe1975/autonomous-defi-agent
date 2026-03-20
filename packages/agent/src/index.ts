@@ -171,8 +171,8 @@ async function main(): Promise<void> {
     process.exit(0);
   };
 
-  process.on("SIGINT", shutdown);
-  process.on("SIGTERM", shutdown);
+  process.on("SIGINT",  () => { shutdown().catch(() => process.exit(1)); });
+  process.on("SIGTERM", () => { shutdown().catch(() => process.exit(1)); });
 
   while (true) {
     iteration++;
