@@ -136,29 +136,50 @@ async function fetchChainlinkPrice(
  * @param rpcUrl  - JSON-RPC endpoint (same as WALLET_RPC_URL)
  * @param network - "mainnet" | "sepolia" (default: "sepolia")
  */
+/**
+ * Tries Chainlink for a single feed; resolves to null on failure.
+ */
+async function tryChainlink(
+  provider: ethers.JsonRpcProvider,
+  feedAddress: string,
+  symbol: string
+): Promise<PriceData | null> {
+  try {
+    return await fetchChainlinkPrice(provider, feedAddress, symbol);
+  } catch {
+    return null;
+  }
+}
+
 export async function fetchPrices(
   rpcUrl: string,
   network = "sepolia"
 ): Promise<OraclePrices> {
   const feeds = FEEDS[network] ?? FEEDS["sepolia"]!;
+  const provider = new ethers.JsonRpcProvider(rpcUrl);
 
-  try {
-    const provider = new ethers.JsonRpcProvider(rpcUrl);
+  // Fetch each feed independently — partial Chainlink success is fine.
+  const [clEth, clUsdt, clXau, gecko] = await Promise.all([
+    tryChainlink(provider, feeds.eth,  "ETH"),
+    tryChainlink(provider, feeds.usdt, "USDT"),
+    tryChainlink(provider, feeds.xau,  "XAU"),
+    fetchCoinGeckoPrices().catch(() => null),
+  ]);
 
-    const [eth, usdt, xau] = await Promise.all([
-      fetchChainlinkPrice(provider, feeds.eth, "ETH"),
-      fetchChainlinkPrice(provider, feeds.usdt, "USDT"),
-      fetchChainlinkPrice(provider, feeds.xau, "XAU"),
-    ]);
+  const now = Math.floor(Date.now() / 1000);
 
-    return { eth, usdt, xau, fetchedAt: Date.now() };
-  } catch (err) {
-    console.warn(
-      "[oracle] Chainlink fetch failed, falling back to CoinGecko:",
-      err instanceof Error ? err.message : err
-    );
-    return fetchCoinGeckoPrices();
+  const eth = clEth ?? gecko?.eth ?? { symbol: "ETH",  priceUsd: 0, updatedAt: now, source: "fallback" as const };
+  const usdt = clUsdt ?? gecko?.usdt ?? { symbol: "USDT", priceUsd: 1, updatedAt: now, source: "fallback" as const };
+  const xau  = clXau  ?? gecko?.xau  ?? { symbol: "XAU",  priceUsd: 0, updatedAt: now, source: "fallback" as const };
+
+  const sources = [eth, usdt, xau].map(p => p.source);
+  if (sources.some(s => s === "chainlink")) {
+    console.log(`[oracle] Prices — ETH:$${eth.priceUsd.toFixed(0)} (${eth.source}) | XAU:$${xau.priceUsd.toFixed(0)} (${xau.source})`);
+  } else {
+    console.warn("[oracle] All Chainlink feeds unavailable — using CoinGecko/fallback");
   }
+
+  return { eth, usdt, xau, fetchedAt: Date.now() };
 }
 
 /**
