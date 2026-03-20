@@ -192,6 +192,26 @@ function checkRiskGates(
   return triggered;
 }
 
+/** Returns the set of market addresses where the agent already holds YES or NO tokens. */
+async function fetchOpenPositionMarketIds(rpcUrl: string, agentAddress: string): Promise<Set<string>> {
+  const open = new Set<string>();
+  try {
+    const markets = await fetchActiveMarkets(rpcUrl);
+    if (!markets.length) return open;
+    const provider = new ethers.JsonRpcProvider(rpcUrl);
+    await Promise.all(markets.map(async (m) => {
+      const yes = new ethers.Contract(m.yesTokenAddress, ERC20_ABI, provider) as any;
+      const no  = new ethers.Contract(m.noTokenAddress,  ERC20_ABI, provider) as any;
+      const [yBal, nBal]: [bigint, bigint] = await Promise.all([
+        yes.balanceOf(agentAddress),
+        no.balanceOf(agentAddress),
+      ]);
+      if (yBal > 0n || nBal > 0n) open.add(m.address);
+    }));
+  } catch { /* non-fatal */ }
+  return open;
+}
+
 /**
  * Runs the full Observe phase — collects all signals needed for planning.
  *
@@ -211,12 +231,15 @@ export async function observe(
   const prices = await fetchPrices(rpcUrl, network);
   const ethPriceUsd = prices.eth.priceUsd || 3000;
 
-  const [gas, portfolio, usdtEthLiquidity, opportunities] = await Promise.all([
+  const agentAddress = portfolio.address;
+
+  const [gas, usdtEthLiquidity, opportunities] = await Promise.all([
     fetchGasSnapshot(rpcUrl, ethPriceUsd),
-    getPortfolioSnapshot(account, BigInt(Math.round(prices.xau.priceUsd * 1e6))),
     fetchUsdtEthLiquidity(rpcUrl, network, ethPriceUsd),
     discoverOpportunities(prices, rpcUrl),
   ]);
+
+  const openPositionMarketIds = await fetchOpenPositionMarketIds(rpcUrl, agentAddress);
 
   const riskGatesTriggered = checkRiskGates(prices, gas);
 
@@ -227,7 +250,8 @@ export async function observe(
   console.log(
     `[OBSERVE] Fetched ${opportunities.length} opportunities | ` +
     `ETH $${prices.eth.priceUsd.toFixed(0)} | ` +
-    `Gas ${gas.baseFeeGwei.toFixed(1)} gwei`
+    `Gas ${gas.baseFeeGwei.toFixed(1)} gwei | ` +
+    `Open positions: ${openPositionMarketIds.size}`
   );
 
   return {
@@ -237,6 +261,7 @@ export async function observe(
     liquidity: [usdtEthLiquidity],
     opportunities,
     riskGatesTriggered,
+    openPositionMarketIds,
     observedAt: new Date().toISOString(),
   };
 }
