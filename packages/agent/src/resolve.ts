@@ -35,6 +35,46 @@ export const MARKET_RESOLVER_ABI = [
 
 const OutcomeIndex = { INVALID: 0, YES: 1, NO: 2 } as const;
 
+/**
+ * After a market is finalized, tries to claim any matching ConditionalPayment
+ * escrows using the treasury (deployer) key. Silent on failure.
+ */
+async function autoClaimEscrows(
+  rpcUrl: string,
+  marketAddress: string,
+  resolvedOutcome: number,
+  agentAddress: string
+): Promise<void> {
+  const cpAddress      = process.env["CONDITIONAL_PAYMENT_ADDRESS"];
+  const deployerKey    = process.env["DEPLOYER_PRIVATE_KEY"];
+  if (!cpAddress || !deployerKey) return;
+
+  try {
+    const provider      = new ethers.JsonRpcProvider(rpcUrl);
+    const treasury      = new ethers.Wallet(deployerKey.trim(), provider);
+    const cp            = new ethers.Contract(cpAddress, CONDITIONAL_PAYMENT_ABI, treasury) as any;
+
+    const paymentIds: string[] = await cp.getCreatorPayments(agentAddress);
+    if (!paymentIds.length) return;
+
+    for (const id of paymentIds) {
+      try {
+        const p = await cp.getPayment(id);
+        const alreadySettled = p.claimedAmount >= p.totalAmount || p.cancelled;
+        const matchesMarket  = p.market.toLowerCase() === marketAddress.toLowerCase();
+        const matchesOutcome = Number(p.triggerOutcome) === resolvedOutcome;
+        if (!alreadySettled && matchesMarket && matchesOutcome) {
+          const tx = await cp.claimPayment(id);
+          await tx.wait();
+          console.log(`  ✓ ConditionalPayment claimed: ${id.slice(0, 10)}… TX: ${tx.hash}`);
+        }
+      } catch { /* individual claim failure is non-fatal */ }
+    }
+  } catch (err) {
+    console.warn(`[RESOLVE] Auto-claim escrows failed: ${err instanceof Error ? err.message : err}`);
+  }
+}
+
 const CHAINLINK_ABI = [
   "function latestRoundData() external view returns (uint80 roundId, int256 answer, uint256 startedAt, uint256 updatedAt, uint80 answeredInRound)",
   "function decimals() external view returns (uint8)",
@@ -158,6 +198,7 @@ export async function resolveMarkets(
           const tx = await resolver.finalizeResolution(marketId);
           await tx.wait();
           console.log(`  ✓ Market resolved on-chain. TX: ${tx.hash}`);
+          await autoClaimEscrows(rpcUrl, market.address, res.outcome, agentAddress);
           results.push({ marketAddress: market.address, marketId, action: "finalized", outcome: res.outcome === 1 ? "YES" : "NO", txHash: tx.hash });
         } catch (err) {
           const error = err instanceof Error ? err.message : String(err);
