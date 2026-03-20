@@ -47,8 +47,9 @@ const usdt     = new ethers.Contract(USDT_ADDRESS, ERC20_ABI, wallet);
 const factory  = new ethers.Contract(FACTORY_ADDRESS, FACTORY_ABI, wallet);
 const iface    = new ethers.Interface(FACTORY_ABI);
 
-// Seed each side with 5 USDT (5_000_000 micro-USDT) → starts at 50/50
-const SEED = 5_000_000n;
+// Seed each side with 0 USDT — markets start empty, agent provides liquidity on entry.
+// Set to 5_000_000n if your deployer wallet holds mintable test USDT with approve rights.
+const SEED = 0n;
 
 const now = Math.floor(Date.now() / 1000);
 const days = (n) => now + n * 86400;
@@ -125,17 +126,18 @@ console.log(`\nDeployer: ${wallet.address}`);
 console.log(`USDT balance: $${(Number(balance) / 1e6).toFixed(2)}`);
 console.log(`Total seed required: $${(Number(totalSeed) / 1e6).toFixed(2)} ($${(Number(SEED * 2n) / 1e6).toFixed(2)} per market × ${MARKETS.length} markets)\n`);
 
-if (balance < totalSeed) {
+if (totalSeed > 0n && balance < totalSeed) {
   console.error(`Insufficient USDT. Need $${(Number(totalSeed) / 1e6).toFixed(2)}, have $${(Number(balance) / 1e6).toFixed(2)}.`);
-  console.error("Deploy with 0 seed instead? Edit SEED to 0n and re-run.");
   process.exit(1);
 }
 
-// Approve factory for total seed in one tx
-console.log("Approving USDT for factory...");
-const approveTx = await usdt.approve(FACTORY_ADDRESS, totalSeed);
-await approveTx.wait();
-console.log("✓ Approved\n");
+// Approve factory for total seed (skip if no seed needed)
+if (totalSeed > 0n) {
+  console.log("Approving USDT for factory...");
+  const approveTx = await usdt.approve(FACTORY_ADDRESS, totalSeed);
+  await approveTx.wait();
+  console.log("✓ Approved\n");
+}
 
 const results = [];
 
