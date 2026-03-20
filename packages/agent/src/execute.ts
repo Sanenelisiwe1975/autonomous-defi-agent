@@ -315,9 +315,6 @@ async function executeBridgeUsdt0(
   }
 }
 
-/**
- * Executes all approved actions from the Decide phase using the WDK wallet.
- *
 async function executeCreateMarket(
   account: WalletAccountEvm,
   action: CreateMarketAction,
