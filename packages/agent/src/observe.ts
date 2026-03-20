@@ -24,7 +24,7 @@ import {
 } from "@repo/data";
 import { getPortfolioSnapshot, type PortfolioSnapshot } from "@repo/wdk";
 import type { RawOpportunity } from "@repo/planner";
-import { fetchActiveMarkets, getEthersSigner } from "./contracts.js";
+import { fetchActiveMarkets, getEthersSigner, ERC20_ABI } from "./contracts.js";
 import { ethers } from "ethers";
 
 
