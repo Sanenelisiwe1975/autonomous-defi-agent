@@ -526,6 +526,7 @@ export default function PredictionMarketsPage() {
         .layout-markets { display: grid; grid-template-columns: 1fr 300px; gap: 24px; align-items: start; }
         .layout-portfolio { display: grid; grid-template-columns: 1fr 280px; gap: 24px; align-items: start; }
         .layout-agent { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .layout-agent > * { min-width: 0; overflow: hidden; }
         .kpi-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-bottom: 24px; }
         .portfolio-summary { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 24px; }
         .snapshot-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
