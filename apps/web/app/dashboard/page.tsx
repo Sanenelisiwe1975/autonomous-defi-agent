@@ -3,7 +3,6 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import { TradeTable } from "../../components/TradeTable";
 import { PortfolioChart } from "../../components/PortfolioChart";
-import { metadata } from '../layout';
 
 
 interface AgentState {
@@ -558,16 +557,13 @@ export default function PredictionMarketsPage() {
 
       {/* ── Header ── */}
       <header className="site-header">
-      <header style={{ background: "#fff", borderBottom: "1px solid #ede8e8", padding: "0 32px", height: 60, display: "flex", alignItems: "center", justifyContent: "space-between", position: "sticky", top: 0, zIndex: 50 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
           <div style={{ width: 30, height: 30, borderRadius: 9, background: "#f3f0fb", border: "1px solid #ddd5f5", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
             </svg>
           </div>
-          <span style={{ fontFamily: "'DM Serif Display', Georgia, serif", fontSize: 17, color: "#2a2020", letterSpacing: "-.2px", whiteSpace: "nowrap" }}>DeFi Agent</span>
+          <span style={{ fontFamily: "'DM Serif Display', Georgia, serif", fontSize: 17, color: "#2a2020", letterSpacing: "-.2px", whiteSpace: "nowrap" }}>NeuronFi</span>
           {agentState && <span className="header-meta" style={{ fontSize: 11, color: "#c4b8b8" }}>#{agentState.iteration} · {agentState.network}</span>}
-          <span style={{ fontFamily: "'DM Serif Display', Georgia, serif", fontSize: 17, color: "#2a2020", letterSpacing: "-.2px" }}> NeuronFi</span>
-          {agentState && <span style={{ fontSize: 11, color: "#c4b8b8" }}>#{agentState.iteration} · {agentState.network}</span>}
         </div>
 
         <div className="header-tabs">
@@ -1006,7 +1002,7 @@ export default function PredictionMarketsPage() {
                 <TradeTable trades={trades} />
               </div>
 
-              {/* Last executions from current cycle */}metadata
+              {/* Last executions from current cycle */}
               {agentState && agentState.executions.length > 0 && (
                 <div style={{ background: "#fff", border: "1px solid #ede8e8", borderRadius: 16, padding: "22px" }}>
                   <p style={{ fontFamily: "'DM Serif Display', serif", fontSize: 16, marginBottom: 16 }}>Last cycle actions</p>
