@@ -62,13 +62,14 @@ export async function GET() {
       );
     } catch { /* no recent subscriber events */ }
 
+    const cache = { 'Cache-Control': 's-maxage=60, stale-while-revalidate=120' };
     return NextResponse.json({
       contractAddress:   smAddr,
       activeSubscribers: Number(activeSubscribers),
       totalRevenue:      (Number(totalRevenue) / 1e6).toFixed(2),
       plans,
       recentSubscribers,
-    });
+    }, { headers: cache });
   } catch (err) {
     console.error("[/api/subscription]", err);
     return NextResponse.json({ error: "Chain read failed" }, { status: 500 });

@@ -101,7 +101,8 @@ export async function GET() {
       })
     );
 
-    return NextResponse.json({ markets: markets.filter(Boolean) });
+    const cache = { 'Cache-Control': 's-maxage=30, stale-while-revalidate=60' };
+    return NextResponse.json({ markets: markets.filter(Boolean) }, { headers: cache });
   } catch (err) {
     console.error("[/api/markets]", err);
     return NextResponse.json({ markets: [] });
