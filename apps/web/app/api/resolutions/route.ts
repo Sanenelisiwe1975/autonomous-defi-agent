@@ -17,7 +17,7 @@ async function fetchRationale(
 ): Promise<string | null> {
   try {
     const filter = resolverContract.filters.ResolutionProposed(marketId);
-    const events = await resolver.queryFilter(filter, -10000);
+    const events = await resolver.queryFilter(filter, -5);
     const last = events[events.length - 1];
     return last?.args?.rationale ?? null;
   } catch {
@@ -81,7 +81,8 @@ export async function GET() {
       })
     );
 
-    return NextResponse.json({ resolutions: resolutions.filter(Boolean) });
+    const cache = { 'Cache-Control': 's-maxage=30, stale-while-revalidate=60' };
+    return NextResponse.json({ resolutions: resolutions.filter(Boolean) }, { headers: cache });
   } catch (err) {
     console.error("[/api/resolutions]", err);
     return NextResponse.json({ resolutions: [] });

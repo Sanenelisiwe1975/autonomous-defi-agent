@@ -29,9 +29,9 @@ export async function GET() {
     const refundedFilter = cp.filters.PaymentRefunded();
 
     const [createdEvents, claimedEvents, refundedEvents] = await Promise.all([
-      cp.queryFilter(createdFilter,  -50000) as Promise<Array<{ args: { id: string; creator: string; beneficiary: string; marketId: string; amount: bigint; triggerOutcome: number } }>>,
-      cp.queryFilter(claimedFilter,  -50000) as Promise<Array<{ args: { id: string } }>>,
-      cp.queryFilter(refundedFilter, -50000) as Promise<Array<{ args: { id: string } }>>,
+      cp.queryFilter(createdFilter,  0) as Promise<Array<{ args: { id: string; creator: string; beneficiary: string; marketId: string; amount: bigint; triggerOutcome: number } }>>,
+      cp.queryFilter(claimedFilter,  0) as Promise<Array<{ args: { id: string } }>>,
+      cp.queryFilter(refundedFilter, 0) as Promise<Array<{ args: { id: string } }>>,
     ]);
 
     const claimedIds  = new Set(claimedEvents.map(e  => e.args.id));

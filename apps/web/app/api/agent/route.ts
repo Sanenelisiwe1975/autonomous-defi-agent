@@ -5,8 +5,6 @@
  */
 
 import { NextResponse } from "next/server";
-import fs from "fs/promises";
-import path from "path";
 
 interface AgentState {
   iteration: number;
@@ -51,28 +49,6 @@ async function getFromRedis(): Promise<AgentState | null> {
   }
 }
 
-async function getFromLog(): Promise<AgentState | null> {
-  const logFile = path.join(process.cwd(), "../../packages/agent/data/agent-outcomes.jsonl");
-  try {
-    const content = await fs.readFile(logFile, "utf8");
-    const lines = content.trim().split("\n").filter(Boolean);
-    if (lines.length === 0) return null;
-    const last = JSON.parse(lines[lines.length - 1]!);
-    return {
-      iteration: last.iteration as number,
-      network: last.network as string,
-      portfolio: last.portfolio as AgentState["portfolio"],
-      lastCycleMs: last.durationMs as number,
-      executions: last.executions as AgentState["executions"],
-      marketSentiment: (last.plan as { marketSentiment: string; reasoning: string; summary: string }).marketSentiment,
-      reasoning: (last.plan as { reasoning: string }).reasoning ?? "",
-      summary: (last.plan as { summary: string }).summary ?? "",
-      updatedAt: new Date().toISOString(),
-    };
-  } catch {
-    return null;
-  }
-}
 
 async function getGasGwei(): Promise<string | null> {
   const rpcUrl = process.env["RPC_URL"];
@@ -90,7 +66,7 @@ async function getGasGwei(): Promise<string | null> {
 
 export async function GET() {
   const [state, gasGwei] = await Promise.all([
-    (async () => (await getFromRedis()) ?? (await getFromLog()))(),
+    getFromRedis(),
     getGasGwei(),
   ]);
 

@@ -56,6 +56,7 @@ export async function GET() {
 
     const dailyUsed = dailyLimit - remainingDaily;
 
+    const cache = { 'Cache-Control': 's-maxage=30, stale-while-revalidate=60' };
     return NextResponse.json({
       vaultUsdt: (Number(vaultUsdt) / 1e6).toFixed(2),
       agentUsdt: (Number(agentUsdt) / 1e6).toFixed(2),
@@ -63,7 +64,7 @@ export async function GET() {
       dailyUsed: (Number(dailyUsed > 0n ? dailyUsed : 0n) / 1e6).toFixed(2),
       remainingDaily: (Number(remainingDaily) / 1e6).toFixed(2),
       agentAddress: agentAddress ?? vaultAddress,
-    });
+    }, { headers: cache });
   } catch (err) {
     console.error("[/api/vault]", err);
     return NextResponse.json({ error: "Chain read failed" }, { status: 500 });

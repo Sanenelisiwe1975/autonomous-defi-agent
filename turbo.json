@@ -5,6 +5,19 @@
     "build": {
       "dependsOn": ["^build"],
       "inputs": ["$TURBO_DEFAULT$", ".env*"],
+      "env": [
+        "DATABASE_URL",
+        "REDIS_URL",
+        "NETWORK",
+        "RPC_URL",
+        "MARKET_FACTORY_ADDRESS",
+        "AGENT_VAULT_ADDRESS",
+        "USDT_CONTRACT_ADDRESS",
+        "MARKET_RESOLVER_ADDRESS",
+        "CONDITIONAL_PAYMENT_ADDRESS",
+        "SUBSCRIPTION_MANAGER_ADDRESS",
+        "TREASURY_ADDRESS"
+      ],
       "outputs": [
         "dist/**",
         ".next/**",

@@ -517,19 +517,60 @@ export default function PredictionMarketsPage() {
         .filter-pill.active { background: #f0f5f0; border-color: #cde0cd; color: #5f9a5f; font-weight: 500; }
         .place-btn { width: 100%; padding: 11px; border-radius: 10px; border: none; font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500; cursor: pointer; transition: opacity .15s; }
         .place-btn:hover { opacity: .85; }
+
+        /* ── Responsive layout classes ── */
+        .site-header { background: #fff; border-bottom: 1px solid #ede8e8; padding: 0 32px; height: 60px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 50; gap: 12px; }
+        .header-tabs { display: flex; align-items: center; gap: 6px; background: #fdf9f7; border: 1px solid #ede8e8; border-radius: 99px; padding: 4px 6px; }
+        .header-right { display: flex; align-items: center; gap: 12px; }
+        .header-meta { display: flex; align-items: center; gap: 6px; }
+        .site-main { padding: 28px 32px; max-width: 1200px; margin: 0 auto; }
+        .layout-markets { display: grid; grid-template-columns: 1fr 300px; gap: 24px; align-items: start; }
+        .layout-portfolio { display: grid; grid-template-columns: 1fr 280px; gap: 24px; align-items: start; }
+        .layout-agent { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+        .kpi-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; margin-bottom: 24px; }
+        .portfolio-summary { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-bottom: 24px; }
+        .snapshot-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+        .market-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+
+        @media (max-width: 900px) {
+          .layout-markets { grid-template-columns: 1fr; }
+          .layout-portfolio { grid-template-columns: 1fr; }
+          .layout-agent { grid-template-columns: 1fr; }
+          .kpi-grid { grid-template-columns: repeat(3, 1fr); }
+        }
+        @media (max-width: 680px) {
+          .site-header { padding: 0 16px; height: auto; min-height: 56px; flex-wrap: wrap; padding-top: 10px; padding-bottom: 10px; gap: 8px; }
+          .header-tabs { order: 3; width: 100%; justify-content: center; }
+          .header-right { gap: 8px; }
+          .header-meta { display: none; }
+          .site-main { padding: 16px; }
+          .kpi-grid { grid-template-columns: 1fr 1fr; }
+          .portfolio-summary { grid-template-columns: 1fr 1fr; }
+          .market-grid { grid-template-columns: 1fr; }
+          .tab-btn { padding: 6px 12px; font-size: 12px; }
+        }
+        @media (max-width: 400px) {
+          .kpi-grid { grid-template-columns: 1fr 1fr; }
+          .portfolio-summary { grid-template-columns: 1fr; }
+          .snapshot-grid { grid-template-columns: 1fr; }
+        }
       `}</style>
 
+      {/* ── Header ── */}
+      <header className="site-header">
       <header style={{ background: "#fff", borderBottom: "1px solid #ede8e8", padding: "0 32px", height: 60, display: "flex", alignItems: "center", justifyContent: "space-between", position: "sticky", top: 0, zIndex: 50 }}>
         <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
-          <div style={{ width: 30, height: 30, borderRadius: 9, background: "#f3f0fb", border: "1px solid #ddd5f5", display: "flex", alignItems: "center", justifyContent: "center" }}>
+          <div style={{ width: 30, height: 30, borderRadius: 9, background: "#f3f0fb", border: "1px solid #ddd5f5", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
             <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
             </svg>
           </div>
+          <span style={{ fontFamily: "'DM Serif Display', Georgia, serif", fontSize: 17, color: "#2a2020", letterSpacing: "-.2px", whiteSpace: "nowrap" }}>DeFi Agent</span>
+          {agentState && <span className="header-meta" style={{ fontSize: 11, color: "#c4b8b8" }}>#{agentState.iteration} · {agentState.network}</span>}
           <span style={{ fontFamily: "'DM Serif Display', Georgia, serif", fontSize: 17, color: "#2a2020", letterSpacing: "-.2px" }}> NeuronFi</span>
           {agentState && <span style={{ fontSize: 11, color: "#c4b8b8" }}>#{agentState.iteration} · {agentState.network}</span>}
         </div>
 
-        <div style={{ display: "flex", alignItems: "center", gap: 6, background: "#fdf9f7", border: "1px solid #ede8e8", borderRadius: 99, padding: "4px 6px" }}>
+        <div className="header-tabs">
           {(["markets", "portfolio", "agent"] as const).map(t => (
             <button key={t} className={`tab-btn ${activeTab === t ? "active" : ""}`} onClick={() => setActiveTab(t)}>
               {t.charAt(0).toUpperCase() + t.slice(1)}
@@ -537,26 +578,28 @@ export default function PredictionMarketsPage() {
           ))}
         </div>
 
-        <div style={{ display: "flex", alignItems: "center", gap: 12 }}>
-          <div style={{ display: "flex", alignItems: "center", gap: 7, padding: "6px 12px", background: agentRunning ? "#f0f5f0" : "#fdf0f0", borderRadius: 99, border: `1px solid ${agentRunning ? "#cde0cd" : "#f5d0d0"}` }}>
+        <div className="header-right">
+          <div style={{ display: "flex", alignItems: "center", gap: 7, padding: "6px 12px", background: agentRunning ? "#f0f5f0" : "#fdf0f0", borderRadius: 99, border: `1px solid ${agentRunning ? "#cde0cd" : "#f5d0d0"}`, flexShrink: 0 }}>
             <span style={{ position: "relative", display: "inline-flex" }}>
               {agentRunning && <span style={{ position: "absolute", inset: 0, borderRadius: "50%", background: "#9ec89e", animation: "pulse-ring .9s ease-out infinite" }} />}
               <span style={{ width: 7, height: 7, borderRadius: "50%", background: agentRunning ? "#5f9a5f" : "#c97070", display: "block", position: "relative" }} />
             </span>
-            <span style={{ fontSize: 12, color: agentRunning ? "#5f9a5f" : "#c97070", fontWeight: 500 }}>
-              Agent {agentRunning ? "active" : "waiting"}
+            <span style={{ fontSize: 12, color: agentRunning ? "#5f9a5f" : "#c97070", fontWeight: 500, whiteSpace: "nowrap" }}>
+              {agentRunning ? "Active" : "Offline"}
             </span>
           </div>
-          {(agentState?.lastCycleMs ?? 0) > 0 && (
-            <span style={{ fontSize: 11, color: "#c4b8b8" }}>{((agentState?.lastCycleMs ?? 0) / 1000).toFixed(1)}s/cycle</span>
-          )}
-          {agentState?.gasGwei && (
-            <span style={{ fontSize: 11, color: "#c4b8b8", padding: "4px 10px", background: "#fdf9f7", border: "1px solid #ede8e8", borderRadius: 99 }}>
-              ⛽ {agentState.gasGwei} gwei
-            </span>
-          )}
+          <div className="header-meta" style={{ display: "flex", gap: 8, alignItems: "center" }}>
+            {(agentState?.lastCycleMs ?? 0) > 0 && (
+              <span style={{ fontSize: 11, color: "#c4b8b8" }}>{((agentState?.lastCycleMs ?? 0) / 1000).toFixed(1)}s/cycle</span>
+            )}
+            {agentState?.gasGwei && (
+              <span style={{ fontSize: 11, color: "#c4b8b8", padding: "4px 10px", background: "#fdf9f7", border: "1px solid #ede8e8", borderRadius: 99 }}>
+                ⛽ {agentState.gasGwei} gwei
+              </span>
+            )}
+          </div>
           {walletAddress ? (
-            <div style={{ display: "flex", alignItems: "center", gap: 7, padding: "6px 12px", background: "#f3f0fb", border: "1px solid #ddd5f5", borderRadius: 99 }}>
+            <div style={{ display: "flex", alignItems: "center", gap: 7, padding: "6px 12px", background: "#f3f0fb", border: "1px solid #ddd5f5", borderRadius: 99, flexShrink: 0 }}>
               <span style={{ width: 7, height: 7, borderRadius: "50%", background: "#7b62c9", display: "block" }} />
               <span style={{ fontSize: 11, color: "#7b62c9", fontWeight: 500 }}>
                 {walletAddress.slice(0, 6)}…{walletAddress.slice(-4)}
@@ -570,7 +613,7 @@ export default function PredictionMarketsPage() {
               type="button"
               onClick={connectWallet}
               disabled={connectingWallet}
-              style={{ padding: "6px 14px", borderRadius: 99, border: "1px solid #ddd5f5", background: "#f3f0fb", color: "#7b62c9", fontSize: 12, fontWeight: 500, cursor: "pointer", fontFamily: "'DM Sans', sans-serif" }}
+              style={{ padding: "6px 14px", borderRadius: 99, border: "1px solid #ddd5f5", background: "#f3f0fb", color: "#7b62c9", fontSize: 12, fontWeight: 500, cursor: "pointer", fontFamily: "'DM Sans', sans-serif", whiteSpace: "nowrap", flexShrink: 0 }}
             >
               {connectingWallet ? "Connecting…" : "Connect Wallet"}
             </button>
@@ -578,14 +621,14 @@ export default function PredictionMarketsPage() {
         </div>
       </header>
 
-      <main style={{ padding: "28px 32px", maxWidth: 1200, margin: "0 auto" }}>
+      <main className="site-main">
 
         {/* ── Markets Tab ── */}
         {activeTab === "markets" && (
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 300px", gap: 24, alignItems: "start" }}>
+          <div className="layout-markets">
             <div>
               {/* KPI strip */}
-              <div style={{ display: "grid", gridTemplateColumns: "repeat(5, 1fr)", gap: 10, marginBottom: 24 }}>
+              <div className="kpi-grid">
                 {[
                   { label: "Markets",     value: String(markets.length),    sub: liveMarkets.length > 0 ? "on-chain" : "demo", accent: "#b9a8e8", bg: "#f3f0fb", border: "#ddd5f5" },
                   { label: "Volume",      value: liveMarkets.length > 0 ? `$${(liveMarkets.reduce((s, m) => s + Number(m.volumeUsdt), 0) / 1000).toFixed(0)}K` : "$13.7M", sub: "USD₮ deposited", accent: "#9ec89e", bg: "#f0f5f0", border: "#cde0cd" },
@@ -603,7 +646,7 @@ export default function PredictionMarketsPage() {
 
               {liveMarkets.length === 0 && (
                 <div style={{ background: "#fffbf0", border: "1px solid #f0e0a0", borderRadius: 10, padding: "9px 14px", marginBottom: 14, fontSize: 12, color: "#c49a00" }}>
-                  Showing demo markets — agent is not yet returning live data
+                  Agent offline — showing demo markets. The agent runs as a server process; contact the operator to start it.
                 </div>
               )}
 
@@ -646,7 +689,7 @@ export default function PredictionMarketsPage() {
                   <p style={{ fontSize: 12, marginTop: 6 }}>Try a different search or clear the filter</p>
                 </div>
               ) : (
-                <div className="card-grid" style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 14 }}>
+                <div className="card-grid market-grid">
                   {filtered.map(m => (
                     <MarketCard key={String(m.id)} market={m} onClick={() => setSelected(selected?.id === m.id ? null : m)} />
                   ))}
@@ -654,7 +697,7 @@ export default function PredictionMarketsPage() {
               )}
 
               {liveMarkets.length === 0 && filtered.length > 0 && (
-                <p style={{ fontSize: 12, color: "#c4b8b8", marginTop: 12, textAlign: "center" }}>Showing demo markets — start the agent to load live on-chain markets</p>
+                <p style={{ fontSize: 12, color: "#c4b8b8", marginTop: 12, textAlign: "center" }}>Agent offline — live markets will appear automatically once the agent server process is running.</p>
               )}
             </div>
 
@@ -755,10 +798,10 @@ export default function PredictionMarketsPage() {
 
         {/* ── Portfolio Tab ── */}
         {activeTab === "portfolio" && (
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 280px", gap: 24, alignItems: "start" }}>
+          <div className="layout-portfolio">
             <div>
               {/* Summary */}
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12, marginBottom: 24 }}>
+              <div className="portfolio-summary">
                 {[
                   { label: "Portfolio value", val: portfolioVal, sub: "total mark-to-market", color: "#7b62c9", bg: "#f3f0fb", border: "#ddd5f5" },
                   { label: "USD₮ balance",    val: usdtBal,      sub: "agent wallet",        color: "#5f9a5f", bg: "#f0f5f0", border: "#cde0cd" },
@@ -783,7 +826,7 @@ export default function PredictionMarketsPage() {
                 <div style={{ background: "#fff", border: "1px solid #ede8e8", borderRadius: 16, padding: "22px" }}>
                   <p style={{ fontFamily: "'DM Serif Display', serif", fontSize: 16, marginBottom: 4 }}>Latest snapshot</p>
                   <p style={{ fontSize: 11, color: "#c4b8b8", marginBottom: 16 }}>{new Date(latestSnap.snapshotAt).toLocaleString()}</p>
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 10 }}>
+                  <div className="snapshot-grid">
                     {[
                       { label: "ETH balance", val: `${latestSnap.ethBalance} ETH` },
                       { label: "USD₮",        val: `$${latestSnap.usdtBalance}` },
@@ -859,7 +902,7 @@ export default function PredictionMarketsPage() {
 
         {/* ── Agent Tab ── */}
         {activeTab === "agent" && (
-          <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 20 }}>
+          <div className="layout-agent">
             <div style={{ display: "flex", flexDirection: "column", gap: 16 }}>
               {/* Config */}
               <div style={{ background: "#fff", border: "1px solid #ede8e8", borderRadius: 16, padding: "22px" }}>
